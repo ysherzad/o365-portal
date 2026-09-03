@@ -12,6 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* İstenen Tam Özel Renk Kodları ve Beyaz Yazı Stili */
+        .dept-kg  { background-color: #BF227B !important; color: #ffffff !important; font-weight: 600; }
         .dept-pyp { background-color: #E8B409 !important; color: #ffffff !important; font-weight: 600; }
         .dept-myp { background-color: #E0371D !important; color: #ffffff !important; font-weight: 600; }
         .dept-dp  { background-color: #09BFE8 !important; color: #ffffff !important; font-weight: 600; }
@@ -81,9 +82,10 @@
                 
                 <select id="departmentFilter" onchange="applyFilters()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white outline-none">
                     <option value="">All Departments</option>
-                    <option value="PYP Students">PYP Students</option>
-                    <option value="MYP Students">MYP Students</option>
-                    <option value="DP Students">DP Students</option>
+                    <option value="KG">KG</option>
+                    <option value="PYP">PYP</option>
+                    <option value="MYP">MYP</option>
+                    <option value="DP">DP</option>
                     <option value="Teacher">Teacher</option>
                     <option value="Staff">Staff</option>
                 </select>
@@ -137,8 +139,9 @@
         let rawUsers = [];
         let filteredUsers = [];
 
-        // Grade Options Generation
+        // Grade Options Generation (KG, PYP, MYP, DP)
         const gradesList = [];
+        for (let i = 1; i <= 2; i++) { gradesList.push(`KG-${i}-A`, `KG-${i}-B`); }
         for (let i = 1; i <= 5; i++) { gradesList.push(`PYP-${i}-A`, `PYP-${i}-B`); }
         for (let i = 6; i <= 10; i++) { gradesList.push(`MYP-${i}-A`, `MYP-${i}-B`); }
         for (let i = 11; i <= 12; i++) { gradesList.push(`DP-${i}-A`, `DP-${i}-B`); }
@@ -147,7 +150,7 @@
         const cachedGradeOptions = ['<option value="">N/A</option>']
             .concat(gradesList.map(g => `<option value="${g}">${g}</option>`)).join('');
 
-        const cachedDeptOptions = ['PYP Students', 'MYP Students', 'DP Students', 'Teacher', 'Staff']
+        const cachedDeptOptions = ['KG', 'PYP', 'MYP', 'DP', 'Teacher', 'Staff']
             .map(d => `<option value="${d}">${d}</option>`).join('');
 
         // Initialize Grade Filter Dropdown
@@ -235,7 +238,14 @@
                 return;
             }
 
-            rawUsers = data || [];
+            // Clean legacy "Students" suffix if exists in database
+            rawUsers = (data || []).map(u => {
+                if (u.department) {
+                    u.department = u.department.replace(' Students', '').trim();
+                }
+                return u;
+            });
+
             applyFilters();
         }
 
@@ -264,6 +274,7 @@
 
         function getDeptBadgeClass(dept) {
             if (!dept) return 'dept-staff';
+            if (dept.includes('KG')) return 'dept-kg';
             if (dept.includes('PYP')) return 'dept-pyp';
             if (dept.includes('MYP')) return 'dept-myp';
             if (dept.includes('DP')) return 'dept-dp';
@@ -280,14 +291,12 @@
             }
 
             const isAdmin = userRole === 'maarifadmin';
-            
-            // Sadece 20 kayıt görüntüle
             const displayLimit = 20;
             const usersToRender = filteredUsers.slice(0, displayLimit);
 
             const rows = usersToRender.map(u => {
                 const deptClass = getDeptBadgeClass(u.department);
-                const isStudent = u.department && u.department.includes('Students');
+                const isStudent = u.department && ['KG', 'PYP', 'MYP', 'DP'].includes(u.department);
 
                 const deptSelect = `<select onchange="updateUserField('${u.email}', 'department', this.value)" class="px-2 py-1 rounded text-[11px] font-bold ${deptClass} outline-none cursor-pointer w-full">
                     ${cachedDeptOptions.replace(`value="${u.department}"`, `value="${u.department}" selected`)}
@@ -305,7 +314,7 @@
                         <td class="py-2 px-2.5 text-slate-600 max-w-[180px] truncate" title="${u.email}">${u.email}</td>
                         <td class="py-2 px-2.5 text-slate-500 text-[11px]">${u.created_date || '-'}</td>
                         <td class="py-2 px-2.5 text-slate-500 max-w-[120px] truncate text-[11px]" title="${u.account_type || ''}">${u.account_type || '-'}</td>
-                        <td class="py-2 px-2.5 min-w-[130px]">${deptSelect}</td>
+                        <td class="py-2 px-2.5 min-w-[110px]">${deptSelect}</td>
                         <td class="py-2 px-2.5 min-w-[100px]">${gradeSelect}</td>
                         ${isAdmin ? `<td class="py-2 px-2.5 text-slate-500 max-w-[130px] truncate text-[11px]" title="${u.licenses || ''}">${u.licenses || '-'}</td>` : ''}
                         <td class="py-2 px-2.5">
@@ -387,7 +396,7 @@
                     const rawTitle = (row['Title'] || '').trim();
                     
                     let dept = 'Staff';
-                    if (/ogrenci|öğrenci/i.test(rawTitle)) dept = 'PYP Students';
+                    if (/ogrenci|öğrenci/i.test(rawTitle)) dept = 'PYP';
                     else if (/ogretmen|öğretmen/i.test(rawTitle)) dept = 'Teacher';
 
                     const existing = rawUsers.find(u => u.email === email);
