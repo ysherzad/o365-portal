@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Office 365 Management Portal</title>
+    <title>Office 365 Directory Portal</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS (Excel Engine) -->
@@ -11,11 +11,11 @@
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .dept-pyp { background-color: #FEF08A; color: #854D0E; } /* Yellow */
-        .dept-myp { background-color: #FFEDD5; color: #9A3412; } /* Orange */
-        .dept-dp  { background-color: #BAE6FD; color: #075985; } /* Light Blue */
-        .dept-teacher { background-color: #DCFCE7; color: #166534; } /* Green */
-        .dept-staff { background-color: #F3E8FF; color: #6B21A8; } /* Purple */
+        .dept-pyp { background-color: #FEF08A; color: #854D0E; }
+        .dept-myp { background-color: #FFEDD5; color: #9A3412; }
+        .dept-dp  { background-color: #BAE6FD; color: #075985; }
+        .dept-teacher { background-color: #DCFCE7; color: #166534; }
+        .dept-staff { background-color: #F3E8FF; color: #6B21A8; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8">
@@ -62,7 +62,7 @@
             </div>
         </div>
 
-        <!-- Admin Controls: Upload Master Excel -->
+        <!-- Admin Controls -->
         <div id="adminControls" class="hidden bg-white p-5 rounded-xl shadow-sm border border-slate-200">
             <h2 class="text-sm font-bold text-slate-800 mb-1">Master Directory Import (HQ Excel)</h2>
             <p class="text-xs text-slate-500 mb-4">Upload the central Excel sheet to update users. Existing grades and departments will be preserved.</p>
@@ -72,10 +72,10 @@
             </label>
         </div>
 
-        <!-- Search & Export Toolbar -->
+        <!-- Toolbar -->
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
             <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1">
-                <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Search across all fields..." 
+                <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Search..." 
                        class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full md:w-80">
                 
                 <select id="departmentFilter" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none">
@@ -92,8 +92,8 @@
                 </select>
             </div>
 
-            <button onclick="exportToExcel()" class="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-2">
-                Export Filtered Results to Excel
+            <button onclick="exportToExcel()" class="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition">
+                Export Filtered Results
             </button>
         </div>
 
@@ -120,55 +120,95 @@
                     </tbody>
                 </table>
             </div>
+            <div id="paginationContainer" class="p-3 bg-slate-50 border-t flex justify-between items-center text-xs text-slate-600"></div>
         </div>
 
     </div>
 
+    <!-- EDIT MODAL (Hızlı Düzenleme Penceresi) -->
+    <div id="editModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-xl border p-6 max-w-md w-full space-y-4">
+            <h3 class="font-bold text-slate-900 text-base" id="modalUserTitle">Edit User</h3>
+            <input type="hidden" id="modalUserEmail">
+            
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Department</label>
+                <select id="modalDept" class="w-full p-2 border rounded-lg text-sm bg-white">
+                    <option value="PYP Students">PYP Students</option>
+                    <option value="MYP Students">MYP Students</option>
+                    <option value="DP Students">DP Students</option>
+                    <option value="Teacher">Teacher</option>
+                    <option value="Staff">Staff</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Grade</label>
+                <select id="modalGrade" class="w-full p-2 border rounded-lg text-sm bg-white">
+                    <option value="">N/A</option>
+                </select>
+            </div>
+
+            <div id="adminModalFields" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Status</label>
+                    <select id="modalStatus" class="w-full p-2 border rounded-lg text-sm bg-white">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Availability</label>
+                    <select id="modalAvailability" class="w-full p-2 border rounded-lg text-sm bg-white">
+                        <option value="Available">Available</option>
+                        <option value="Deleted">Deleted</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeEditModal()" class="px-4 py-2 border text-slate-600 rounded-lg text-xs font-semibold">Cancel</button>
+                <button onclick="saveUserModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // REPLACE WITH YOUR SUPABASE CREDENTIALS
+        // KENDİ SUPABASE BİLGİLERİNİZİ EKLEYİN
         const SUPABASE_URL = "https://gnotendqbgfmlscjnwpz.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdub3RlbmRxYmdmbWxzY2pud3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNDY0NDgsImV4cCI6MjEwMzkyMjQ0OH0.KskgJTM4_Gttl8C5sGFoqDHXbjyxOh5aD2vz34BrZ_s";
 
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
-        let userRole = null; // 'maarifadmin' or 'teacher'
+        let userRole = null;
         let rawUsers = [];
         let filteredUsers = [];
+        let currentPage = 1;
+        const pageSize = 30; // Sayfa başına 30 veri gösterilir (donma %0)
 
-        // Grade Options Generation
         const gradesList = [];
         for (let i = 1; i <= 5; i++) { gradesList.push(`PYP-${i}-A`, `PYP-${i}-B`); }
         for (let i = 6; i <= 10; i++) { gradesList.push(`MYP-${i}-A`, `MYP-${i}-B`); }
         for (let i = 11; i <= 12; i++) { gradesList.push(`DP-${i}-A`, `DP-${i}-B`); }
 
-        // Pre-rendered Grade and Department Options (Performance Cache)
-        const cachedGradeOptions = ['<option value="">N/A</option>']
-            .concat(gradesList.map(g => `<option value="${g}">${g}</option>`)).join('');
-
-        const cachedDeptOptions = ['PYP Students', 'MYP Students', 'DP Students', 'Teacher', 'Staff']
-            .map(d => `<option value="${d}">${d}</option>`).join('');
-
-        // Initialize Grade Filter Dropdown
+        // Popüle Et Dropdown'ları
         const gradeFilterSelect = document.getElementById('gradeFilter');
+        const modalGradeSelect = document.getElementById('modalGrade');
         gradesList.forEach(g => {
             gradeFilterSelect.innerHTML += `<option value="${g}">${g}</option>`;
+            modalGradeSelect.innerHTML += `<option value="${g}">${g}</option>`;
         });
 
-        // 1. AUTHENTICATION HANDLERS
+        // AUTH
         async function handleLogin(e) {
             e.preventDefault();
             document.getElementById('loginError').classList.add('hidden');
-
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
 
             const { data, error } = await db.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                showError(error.message);
-                return;
-            }
+            if (error) { showError(error.message); return; }
 
             currentUser = data.user;
             await fetchUserRole();
@@ -176,7 +216,7 @@
         }
 
         async function fetchUserRole() {
-            const { data, error } = await db.from('user_roles').select('role').eq('user_id', currentUser.id).single();
+            const { data } = await db.from('user_roles').select('role').eq('user_id', currentUser.id).single();
             userRole = (data && data.role) ? data.role : 'teacher';
         }
 
@@ -200,7 +240,6 @@
             }
         }
 
-        // 2. UI RENDER CONTROL
         function showApp() {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('appScreen').classList.remove('hidden');
@@ -216,21 +255,16 @@
                 document.getElementById('thActions').classList.remove('hidden');
             } else {
                 badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-100 text-emerald-800";
+                document.getElementById('adminModalFields').classList.add('hidden');
             }
 
             loadDirectory();
         }
 
-        // 3. LOAD & FILTER DATA
+        // LOAD DATA
         async function loadDirectory() {
-            // Fetch up to 2000 records to bypass Supabase default 1000 limit
             const { data, error } = await db.from('users').select('*').range(0, 2000).order('display_name');
-
-            if (error) {
-                alert("Error loading data: " + error.message);
-                return;
-            }
-
+            if (error) { alert("Error loading data: " + error.message); return; }
             rawUsers = data || [];
             applyFilters();
         }
@@ -255,6 +289,7 @@
                 return matchesSearch && matchesDept && matchesGrade;
             });
 
+            currentPage = 1;
             renderTable();
         }
 
@@ -273,52 +308,33 @@
 
             if (filteredUsers.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-slate-400">No matching records found.</td></tr>';
+                document.getElementById('paginationContainer').innerHTML = '';
                 return;
             }
 
             const isAdmin = userRole === 'maarifadmin';
-            const displayLimit = 100;
-            const usersToRender = filteredUsers.slice(0, displayLimit);
+            const totalPages = Math.ceil(filteredUsers.length / pageSize);
+            const startIndex = (currentPage - 1) * pageSize;
+            const usersToRender = filteredUsers.slice(startIndex, startIndex + pageSize);
 
-            const rows = usersToRender.map(u => {
+            let html = '';
+            for (let i = 0; i < usersToRender.length; i++) {
+                const u = usersToRender[i];
                 const deptClass = getDeptBadgeClass(u.department);
-                const isStudent = u.department && u.department.includes('Students');
 
-                const deptSelect = `<select onchange="updateUserField('${u.email}', 'department', this.value)" class="px-2 py-1 rounded text-xs font-bold ${deptClass} outline-none cursor-pointer">
-                    ${cachedDeptOptions.replace(`value="${u.department}"`, `value="${u.department}" selected`)}
-                </select>`;
-
-                const gradeSelect = `<select onchange="updateUserField('${u.email}', 'grade', this.value)" class="px-2 py-1 border rounded bg-white text-xs outline-none cursor-pointer ${!isStudent ? 'opacity-50' : ''}">
-                    ${cachedGradeOptions.replace(`value="${u.grade}"`, `value="${u.grade}" selected`)}
-                </select>`;
-
-                return `
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="p-3 font-semibold text-slate-900">
-                            ${isAdmin ? `<input type="text" value="${u.display_name}" onchange="updateUserField('${u.email}', 'display_name', this.value)" class="border-b bg-transparent outline-none w-full focus:border-blue-500">` : u.display_name}
-                        </td>
+                html += `
+                    <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openEditModal('${u.email}')">
+                        <td class="p-3 font-semibold text-slate-900">${u.display_name}</td>
                         <td class="p-3 text-slate-600">${u.email}</td>
                         <td class="p-3 text-slate-500">${u.created_date || '-'}</td>
                         <td class="p-3 text-slate-500">${u.account_type || '-'}</td>
-                        <td class="p-3">${deptSelect}</td>
-                        <td class="p-3">${gradeSelect}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold ${deptClass}">${u.department || 'N/A'}</span></td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded border text-xs font-medium bg-white">${u.grade || 'N/A'}</span></td>
                         <td class="p-3 text-slate-500 max-w-xs truncate" title="${u.licenses}">${u.licenses || '-'}</td>
-                        <td class="p-3">
-                            ${isAdmin ? `
-                                <select onchange="updateUserField('${u.email}', 'status', this.value)" class="px-2 py-1 border rounded bg-white text-xs font-semibold ${u.status === 'Active' ? 'text-emerald-700' : 'text-red-600'}">
-                                    <option value="Active" ${u.status === 'Active' ? 'selected' : ''}>Active</option>
-                                    <option value="Inactive" ${u.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
-                                </select>
-                            ` : `<span class="${u.status === 'Active' ? 'text-emerald-600' : 'text-red-500'} font-semibold">${u.status}</span>`}
-                        </td>
+                        <td class="p-3"><span class="${u.status === 'Active' ? 'text-emerald-600' : 'text-red-500'} font-semibold">${u.status}</span></td>
+                        ${isAdmin ? `<td class="p-3 text-slate-500">${u.availability || 'Available'}</td>` : ''}
                         ${isAdmin ? `
-                            <td class="p-3">
-                                <select onchange="updateUserField('${u.email}', 'availability', this.value)" class="px-2 py-1 border rounded bg-white text-xs font-semibold ${u.availability === 'Available' ? 'text-blue-700' : 'text-slate-400'}">
-                                    <option value="Available" ${u.availability === 'Available' ? 'selected' : ''}>Available</option>
-                                    <option value="Deleted" ${u.availability === 'Deleted' ? 'selected' : ''}>Deleted</option>
-                                </select>
-                            </td>
-                            <td class="p-3 text-right">
+                            <td class="p-3 text-right" onclick="event.stopPropagation()">
                                 <button onclick="deleteUser('${u.email}')" class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded">
                                     Delete
                                 </button>
@@ -326,47 +342,90 @@
                         ` : ''}
                     </tr>
                 `;
-            }).join('');
-
-            let footerNote = '';
-            if (filteredUsers.length > displayLimit) {
-                footerNote = `<tr><td colspan="10" class="p-3 text-center text-xs text-slate-500 bg-slate-50 font-medium">Showing top 100 of ${filteredUsers.length} records. Use search or filters to narrow down results.</td></tr>`;
             }
 
-            tbody.innerHTML = rows + footerNote;
+            tbody.innerHTML = html;
+
+            // Render Pagination
+            document.getElementById('paginationContainer').innerHTML = `
+                <div>Showing <b>${startIndex + 1}</b> to <b>${Math.min(startIndex + pageSize, filteredUsers.length)}</b> of <b>${filteredUsers.length}</b> entries</div>
+                <div class="flex gap-2">
+                    <button onclick="changePage(-1)" ${currentPage === 1 ? 'disabled class="opacity-40 cursor-not-allowed px-3 py-1 border rounded bg-white"' : 'class="px-3 py-1 border rounded bg-white hover:bg-slate-100"'}>Previous</button>
+                    <span class="px-3 py-1 font-bold">Page ${currentPage} of ${totalPages}</span>
+                    <button onclick="changePage(1)" ${currentPage === totalPages ? 'disabled class="opacity-40 cursor-not-allowed px-3 py-1 border rounded bg-white"' : 'class="px-3 py-1 border rounded bg-white hover:bg-slate-100"'}>Next</button>
+                </div>
+            `;
         }
 
-        // 4. UPDATE & DELETE OPERATIONS
-        async function updateUserField(email, field, value) {
-            const updatePayload = {};
-            updatePayload[field] = value;
+        function changePage(direction) {
+            currentPage += direction;
+            renderTable();
+        }
+
+        // EDIT MODAL HANDLERS
+        function openEditModal(email) {
+            const u = rawUsers.find(x => x.email === email);
+            if (!u) return;
+
+            document.getElementById('modalUserTitle').innerText = `Edit: ${u.display_name}`;
+            document.getElementById('modalUserEmail').value = u.email;
+            document.getElementById('modalDept').value = u.department || 'Staff';
+            document.getElementById('modalGrade').value = u.grade || '';
+            document.getElementById('modalStatus').value = u.status || 'Active';
+            document.getElementById('modalAvailability').value = u.availability || 'Available';
+
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        async function saveUserModal() {
+            const email = document.getElementById('modalUserEmail').value;
+            const dept = document.getElementById('modalDept').value;
+            const grade = document.getElementById('modalGrade').value;
+            const status = document.getElementById('modalStatus').value;
+            const availability = document.getElementById('modalAvailability').value;
+
+            const updatePayload = { department: dept, grade: grade };
+            if (userRole === 'maarifadmin') {
+                updatePayload.status = status;
+                updatePayload.availability = availability;
+            }
 
             const { error } = await db.from('users').update(updatePayload).eq('email', email);
 
             if (error) {
                 alert("Update failed: " + error.message);
-                loadDirectory();
             } else {
-                const user = rawUsers.find(u => u.email === email);
-                if (user) user[field] = value;
+                const u = rawUsers.find(x => x.email === email);
+                if (u) {
+                    u.department = dept;
+                    u.grade = grade;
+                    if (userRole === 'maarifadmin') {
+                        u.status = status;
+                        u.availability = availability;
+                    }
+                }
+                closeEditModal();
                 applyFilters();
             }
         }
 
+        // DELETE
         async function deleteUser(email) {
             if (!confirm(`Are you sure you want to permanently delete user: ${email}?`)) return;
 
             const { error } = await db.from('users').delete().eq('email', email);
-
-            if (error) {
-                alert("Deletion failed: " + error.message);
-            } else {
+            if (error) { alert("Deletion failed: " + error.message); }
+            else {
                 rawUsers = rawUsers.filter(u => u.email !== email);
                 applyFilters();
             }
         }
 
-        // 5. IMPORT MASTER EXCEL (ADMIN ONLY)
+        // IMPORT & EXPORT
         async function importMasterExcel(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -380,7 +439,6 @@
                 const records = json.map(row => {
                     const email = (row['Email'] || '').trim().toLowerCase();
                     const rawTitle = (row['Title'] || '').trim();
-                    
                     let dept = 'Staff';
                     if (/ogrenci|öğrenci/i.test(rawTitle)) dept = 'PYP Students';
                     else if (/ogretmen|öğretmen/i.test(rawTitle)) dept = 'Teacher';
@@ -401,57 +459,31 @@
                 });
 
                 const { error } = await db.from('users').upsert(records, { onConflict: 'email' });
-
-                if (error) {
-                    alert("Import failed: " + error.message);
-                } else {
-                    alert(`Successfully imported ${records.length} records!`);
-                    loadDirectory();
-                }
+                if (error) { alert("Import failed: " + error.message); }
+                else { alert(`Successfully imported ${records.length} records!`); loadDirectory(); }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // 6. DYNAMIC EXCEL EXPORT
         function exportToExcel() {
-            if (filteredUsers.length === 0) {
-                alert("No filtered data available to export.");
-                return;
-            }
-
-            const isAdmin = userRole === 'maarifadmin';
-
-            const exportData = filteredUsers.map(u => {
-                const row = {
-                    'Display Name': u.display_name,
-                    'Email': u.email,
-                    'Create Date': u.created_date,
-                    'Account Type': u.account_type,
-                    'Department': u.department,
-                    'Grade': u.grade || 'N/A',
-                    'Licenses': u.licenses,
-                    'Status': u.status
-                };
-                if (isAdmin) {
-                    row['Availability'] = u.availability;
-                }
-                return row;
-            });
+            if (filteredUsers.length === 0) { alert("No filtered data to export."); return; }
+            const exportData = filteredUsers.map(u => ({
+                'Display Name': u.display_name,
+                'Email': u.email,
+                'Create Date': u.created_date,
+                'Account Type': u.account_type,
+                'Department': u.department,
+                'Grade': u.grade || 'N/A',
+                'Licenses': u.licenses,
+                'Status': u.status
+            }));
 
             const worksheet = XLSX.utils.json_to_sheet(exportData);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered_Directory");
-
-            const activeDept = document.getElementById('departmentFilter').value;
-            const activeGrade = document.getElementById('gradeFilter').value;
-            let fileName = "Directory_Export";
-            if (activeGrade) fileName += `_${activeGrade}`;
-            else if (activeDept) fileName += `_${activeDept.replace(/\s+/g, '_')}`;
-
-            XLSX.writeFile(workbook, `${fileName}.xlsx`);
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Directory");
+            XLSX.writeFile(workbook, "Directory_Export.xlsx");
         }
 
-        // Initialize Application Session
         checkSession();
     </script>
 </body>
