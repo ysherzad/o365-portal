@@ -4,8 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kullanıcı Yönetim Paneli</title>
+  
+  <!-- Supabase JS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- FontAwesome İkonları -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
+    /* ==========================================
+       1. GLOBAL TEMA VE DEĞİŞKENLER
+       ========================================== */
     :root {
       --color-myp: #E0371D;
       --color-pyp: #E8B409;
@@ -14,217 +23,773 @@
       --color-teacher: #34C28F;
       --color-active: #28a745;
       --color-inactive: #dc3545;
+      
+      --bg-body: #f4f6f9;
+      --bg-card: #ffffff;
+      --text-dark: #2c3e50;
+      --border-color: #e2e8f0;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
 
     body {
-      background-color: #f4f6f9;
-      color: #333;
+      background-color: var(--bg-body);
+      color: var(--text-dark);
       padding: 20px;
       width: 100%;
+      min-height: 100vh;
     }
 
-    /* Sayfanın enini en büyük yapma (Full Width) */
-    .container {
+    /* ==========================================
+       2. DÜZEN VE KONTEYNER (FULL WIDTH)
+       ========================================== */
+    .app-container {
       width: 100%;
       max-width: 100%;
-      margin: 0 auto;
-      background: #ffffff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      background: var(--bg-card);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
     }
 
-    h1 {
-      margin-bottom: 20px;
+    /* Üst Başlık ve Oturum Bilgisi */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .header-bar h1 {
       font-size: 24px;
-      color: #1a1a1a;
+      font-weight: 700;
+      color: var(--text-dark);
     }
 
-    /* Tablo Konfigürasyonu */
-    .table-wrapper {
+    .role-switcher {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      background: #f8f9fa;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    /* ==========================================
+       3. FİLTRE VE ARAMA BARI
+       ========================================== */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .search-filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .input-control, .select-control {
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-control:focus, .select-control:focus {
+      border-color: var(--color-dp);
+    }
+
+    .search-box {
+      min-width: 250px;
+      flex: 1;
+    }
+
+    /* ==========================================
+       4. BUTONLAR VE İŞLEM ELAMANLARI
+       ========================================== */
+    .btn {
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background-color: #0d6efd;
+      color: #ffffff;
+    }
+
+    .btn-danger {
+      background-color: var(--color-inactive);
+      color: #ffffff;
+    }
+
+    .btn-secondary {
+      background-color: #6c757d;
+      color: #ffffff;
+    }
+
+    /* Özel Durum / Departman Rozet Butonları */
+    .badge-btn {
+      display: inline-block;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #ffffff !important; /* BUTON YAZILARI BEYAZ */
+      border-radius: 20px;
+      border: none;
+      text-align: center;
+      white-space: nowrap;
+      text-decoration: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+
+    /* Departman Renkleri */
+    .bg-myp { background-color: var(--color-myp) !important; }
+    .bg-pyp { background-color: var(--color-pyp) !important; }
+    .bg-dp { background-color: var(--color-dp) !important; }
+
+    /* Rol Renkleri */
+    .bg-staff { background-color: var(--color-staff) !important; }
+    .bg-teacher { background-color: var(--color-teacher) !important; }
+
+    /* Status & Availability Renkleri */
+    .bg-active { background-color: var(--color-active) !important; cursor: pointer; }
+    .bg-inactive { background-color: var(--color-inactive) !important; cursor: pointer; }
+
+    /* ==========================================
+       5. TABLO DÜZENİ
+       ========================================== */
+    .table-responsive {
       width: 100%;
       overflow-x: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
     }
 
-    table {
+    .custom-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
-      min-width: 1000px; /* Sütunların sıkışmasını önlemek için */
-    }
-
-    th, td {
-      padding: 12px 15px;
       text-align: left;
-      border-bottom: 1px solid #e0e0e0;
-      white-space: nowrap;
+      font-size: 14px;
     }
 
-    th {
+    .custom-table th, .custom-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .custom-table th {
       background-color: #f8f9fa;
+      font-weight: 600;
+      color: #495057;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .custom-table tbody tr:hover {
+      background-color: #f1f5f9;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      font-size: 15px;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .icon-btn.edit { color: #0d6efd; }
+    .icon-btn.delete { color: var(--color-inactive); }
+    .icon-btn:hover { background: #e2e8f0; }
+
+    /* ==========================================
+       6. MODAL (PENCERE) STİLLERİ
+       ========================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      width: 100%;
+      max-width: 550px;
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      transform: translateY(-20px);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-header h3 {
+      font-size: 18px;
+    }
+
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #6c757d;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group.full-width {
+      grid-column: span 2;
+    }
+
+    .form-group label {
+      font-size: 12px;
       font-weight: 600;
       color: #495057;
     }
 
-    tr:hover {
-      background-color: #f1f3f5;
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border-color);
     }
 
-    /* Buton ve Rozet (Badge) Stilleri */
-    .btn-badge {
-      display: inline-block;
-      padding: 6px 12px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #ffffff !important; /* Buton içi yazılar BEYAZ */
-      border-radius: 4px;
-      border: none;
-      text-align: center;
-      line-height: 1;
-    }
-
-    /* Departman ve Rol Stilleri */
-    .badge-myp { background-color: var(--color-myp); }
-    .badge-pyp { background-color: var(--color-pyp); }
-    .badge-dp { background-color: var(--color-dp); }
-    .badge-staff { background-color: var(--color-staff); }
-    .badge-teacher { background-color: var(--color-teacher); }
-
-    /* Status ve Availability Buton Stilleri */
-    .btn-active { background-color: var(--color-active); }
-    .btn-inactive { background-color: var(--color-inactive); }
-
-    /* Varsayılan Gizlilik Sınıfı */
+    /* ==========================================
+       7. YETKİ KONTROLÜ VE TOAST BİLDİRİMİ
+       ========================================== */
     .hide-licenses {
       display: none !important;
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+
+    .toast {
+      padding: 12px 20px;
+      background: #333;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-top: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.3s forwards;
+    }
+
+    .toast.success { background: var(--color-active); }
+    .toast.error { background: var(--color-inactive); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <h1>Kullanıcı Listesi</h1>
+  <div class="app-container">
     
-    <div class="table-wrapper">
-      <table id="usersTable">
+    <!-- Üst Başlık -->
+    <div class="header-bar">
+      <h1>Kullanıcı Yönetim Paneli</h1>
+      <div class="role-switcher">
+        <label for="currentUserRoleSelect"><strong>Aktif Oturum Rolü:</strong></label>
+        <select id="currentUserRoleSelect" class="select-control" onchange="changeUserRole(this.value)">
+          <option value="admin">Admin / Staff</option>
+          <option value="teacher" selected>Teacher (Lisanslar Gizli)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Filtre ve Aksiyon Barı -->
+    <div class="toolbar">
+      <div class="search-filter-group">
+        <input type="text" id="searchInput" class="input-control search-box" placeholder="İsim veya e-posta ile ara..." oninput="applyFilters()">
+        
+        <select id="filterDepartment" class="select-control" onchange="applyFilters()">
+          <option value="">Tüm Departmanlar</option>
+          <option value="MYP">MYP</option>
+          <option value="PYP">PYP</option>
+          <option value="DP">DP</option>
+        </select>
+
+        <select id="filterRole" class="select-control" onchange="applyFilters()">
+          <option value="">Tüm Roller</option>
+          <option value="staff">Staff</option>
+          <option value="teacher">Teacher</option>
+        </select>
+
+        <select id="filterStatus" class="select-control" onchange="applyFilters()">
+          <option value="">Tüm Durumlar</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" onclick="openUserModal()"><i class="fa-solid fa-plus"></i> Yeni Kullanıcı</button>
+    </div>
+
+    <!-- Kullanıcı Tablosu -->
+    <div class="table-responsive">
+      <table class="custom-table">
         <thead>
           <tr>
             <th>ID</th>
             <th>Ad</th>
             <th>Soyad</th>
-            <th>E-posta</th>
+            <th>E-Posta</th>
             <th>Rol</th>
             <th>Departman</th>
-            <th class="col-licenses">Lisanslar (Licenses)</th>
-            <th>Durum (Status)</th>
-            <th>Kullanılabilirlik (Availability)</th>
+            <th class="col-licenses">Licenses</th>
+            <th>Status</th>
+            <th>Availability</th>
+            <th>İşlemler</th>
           </tr>
         </thead>
-        <tbody id="usersTableBody">
-          <!-- Veriler JavaScript ile buraya eklenecek -->
+        <tbody id="userTableBody">
+          <!-- Veriler Dinamik Olarak Yüklenecek -->
         </tbody>
       </table>
     </div>
+
   </div>
 
+  <!-- KULLANICI EKLEME / DÜZENLEME MODALI -->
+  <div class="modal-overlay" id="userModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Yeni Kullanıcı Ekle</h3>
+        <button class="close-modal" onclick="closeUserModal()">&times;</button>
+      </div>
+      <form id="userForm" onsubmit="handleFormSubmit(event)">
+        <input type="hidden" id="userId">
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="firstName">Ad</label>
+            <input type="text" id="firstName" class="input-control" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="lastName">Soyad</label>
+            <input type="text" id="lastName" class="input-control" required>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="email">E-Posta</label>
+            <input type="email" id="email" class="input-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="role">Rol</label>
+            <select id="role" class="select-control" required>
+              <option value="teacher">Teacher</option>
+              <option value="staff">Staff</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="department">Departman</label>
+            <select id="department" class="select-control" required>
+              <option value="MYP">MYP</option>
+              <option value="PYP">PYP</option>
+              <option value="DP">DP</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width form-licenses-group">
+            <label for="licenses">Licenses</label>
+            <input type="text" id="licenses" class="input-control" placeholder="Örn: Standard, Pro">
+          </div>
+
+          <div class="form-group">
+            <label for="status">Status</label>
+            <select id="status" class="select-control">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="availability">Availability</label>
+            <select id="availability" class="select-control">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeUserModal()">İptal</button>
+          <button type="submit" class="btn btn-primary">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST BİLDİRİM KONTEYNERİ -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ==========================================
+     JAVASCRIPT MANTIĞI VE SUPABASE ENTEGRASYONU
+     ========================================== -->
   <script>
-    // 1. Supabase Bağlantı Bilgilerini Buraya Girin
+    // 1. SUPABASE AYARLARI (Kendi bilgilerinizi giriniz)
     const SUPABASE_URL = "https://gnotendqbgfmlscjnwpz.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdub3RlbmRxYmdmbWxzY2pud3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNDY0NDgsImV4cCI6MjEwMzkyMjQ0OH0.KskgJTM4_Gttl8C5sGFoqDHXbjyxOh5aD2vz34BrZ_s";
+    
+    let supabaseClient = null;
+    if (SUPABASE_URL !== "https://YOUR-PROJECT.supabase.co") {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Uygulama Durum Yönetimi (State)
+    let allUsers = [];
+    let filteredUsers = [];
+    let currentUserRole = "teacher"; // Varsayılan test rolü
 
-    // Giriş yapan kullanıcının rolü (Örn: 'teacher', 'admin', 'staff')
-    // Bu bilgiyi oturum açan kullanıcı verisinden çekebilirsiniz
-    const currentUserRole = "teacher"; 
+    // Örnek YEDEK Veriler (Supabase verisi yoksa sistemin çalışması için)
+    const fallbackUsers = [
+      { id: 1, first_name: "Ahmet", last_name: "Yılmaz", email: "ahmet@maarif.com", role: "teacher", department: "MYP", licenses: "Full License", status: "Active", availability: "Active" },
+      { id: 2, first_name: "Ayşe", last_name: "Kaya", email: "ayse@maarif.com", role: "staff", department: "PYP", licenses: "Basic License", status: "Inactive", availability: "Inactive" },
+      { id: 3, first_name: "Mehmet", last_name: "Demir", email: "mehmet@maarif.com", role: "teacher", department: "DP", licenses: "Standard License", status: "Active", availability: "Inactive" },
+      { id: 4, first_name: "Zeynep", last_name: "Çelik", email: "zeynep@maarif.com", role: "staff", department: "MYP", licenses: "Admin License", status: "Active", availability: "Active" }
+    ];
 
+    // Sayfa Yüklendiğinde
     document.addEventListener("DOMContentLoaded", () => {
-      checkRolePermissions();
-      fetchUsers();
+      initApp();
     });
 
-    // Rol bazlı gösterim yetkileri
-    function checkRolePermissions() {
+    async function initApp() {
+      applyRolePermissions();
+      await fetchUsers();
+    }
+
+    // Rol Yetkilerini Uygulama (Teacher ise Licenses Gizle)
+    function applyRolePermissions() {
+      const licenseHeaders = document.querySelectorAll('.col-licenses');
+      const licenseFormGroups = document.querySelectorAll('.form-licenses-group');
+
       if (currentUserRole === 'teacher') {
-        // Teacher rolündeyse Licenses sütununu hem başlıktan hem içerikten gizle
-        const licenseElements = document.querySelectorAll('.col-licenses');
-        licenseElements.forEach(el => el.classList.add('hide-licenses'));
+        licenseHeaders.forEach(el => el.classList.add('hide-licenses'));
+        licenseFormGroups.forEach(el => el.classList.add('hide-licenses'));
+      } else {
+        licenseHeaders.forEach(el => el.classList.remove('hide-licenses'));
+        licenseFormGroups.forEach(el => el.classList.remove('hide-licenses'));
       }
     }
 
-    // Supabase'den Verileri Çekme
-    async function fetchUsers() {
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('*');
+    // Aktif Oturum Rolünü Değiştirme
+    function changeUserRole(newRole) {
+      currentUserRole = newRole;
+      applyRolePermissions();
+      renderTable();
+      showToast(`Oturum rolü "${newRole.toUpperCase()}" olarak değiştirildi.`, "info");
+    }
 
-      if (error) {
-        console.error("Veri çekme hatası:", error);
+    // Supabase'den Veri Çekme
+    async function fetchUsers() {
+      if (supabaseClient) {
+        try {
+          const { data, error } = await supabaseClient.from('users').select('*').order('id', { ascending: true });
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allUsers = data;
+          } else {
+            allUsers = [...fallbackUsers];
+          }
+        } catch (err) {
+          console.warn("Supabase verileri çekilemedi, yedek veri kullanılıyor:", err.message);
+          allUsers = [...fallbackUsers];
+        }
+      } else {
+        allUsers = [...fallbackUsers];
+      }
+      
+      applyFilters();
+    }
+
+    // Filtreleme ve Arama
+    function applyFilters() {
+      const searchVal = document.getElementById('searchInput').value.toLowerCase();
+      const deptVal = document.getElementById('filterDepartment').value;
+      const roleVal = document.getElementById('filterRole').value;
+      const statusVal = document.getElementById('filterStatus').value;
+
+      filteredUsers = allUsers.filter(u => {
+        const fullName = `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase();
+        const matchesSearch = fullName.includes(searchVal) || (u.email && u.email.toLowerCase().includes(searchVal));
+        const matchesDept = !deptVal || u.department === deptVal;
+        const matchesRole = !roleVal || (u.role && u.role.toLowerCase() === roleVal.toLowerCase());
+        const matchesStatus = !statusVal || u.status === statusVal;
+
+        return matchesSearch && matchesDept && matchesRole && matchesStatus;
+      });
+
+      renderTable();
+    }
+
+    // Tabloyu Ekrana Basma
+    function renderTable() {
+      const tbody = document.getElementById('userTableBody');
+      tbody.innerHTML = '';
+
+      if (filteredUsers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; color:#999;">Kayıtlı kullanıcı bulunamadı.</td></tr>`;
         return;
       }
 
-      renderTable(users);
-    }
-
-    // Tabloyu Oluşturma
-    function renderTable(users) {
-      const tbody = document.getElementById('usersTableBody');
-      tbody.innerHTML = '';
-
-      users.forEach(user => {
+      filteredUsers.forEach(user => {
         const tr = document.createElement('tr');
 
-        // Rol ve Departman Rozet Sınıflandırması
-        const roleClass = getRoleClass(user.role);
-        const deptClass = getDeptClass(user.department);
-
-        // Status ve Availability için Renk/Buton Mantığı
-        const statusClass = (user.status === 'Active' || user.status === 'active' || user.status === true) ? 'btn-active' : 'btn-inactive';
-        const statusText = (user.status === 'Active' || user.status === 'active' || user.status === true) ? 'Active' : 'Inactive';
-
-        const availClass = (user.availability === 'Available' || user.availability === 'active' || user.availability === true) ? 'btn-active' : 'btn-inactive';
-        const availText = (user.availability === 'Available' || user.availability === 'active' || user.availability === true) ? 'Active' : 'Inactive';
+        // Rozet Sınıfları
+        const deptClass = getDepartmentBadgeClass(user.department);
+        const roleClass = getRoleBadgeClass(user.role);
+        
+        const isStatusActive = (user.status === 'Active' || user.status === true);
+        const statusClass = isStatusActive ? 'bg-active' : 'bg-inactive';
+        
+        const isAvailActive = (user.availability === 'Active' || user.availability === true);
+        const availClass = isAvailActive ? 'bg-active' : 'bg-inactive';
 
         tr.innerHTML = `
-          <td>${user.id || '-'}</td>
+          <td>${user.id}</td>
           <td>${user.first_name || '-'}</td>
           <td>${user.last_name || '-'}</td>
           <td>${user.email || '-'}</td>
-          <td><span class="btn-badge ${roleClass}">${user.role || '-'}</span></td>
-          <td><span class="btn-badge ${deptClass}">${user.department || '-'}</span></td>
+          <td><span class="badge-btn ${roleClass}">${user.role || '-'}</span></td>
+          <td><span class="badge-btn ${deptClass}">${user.department || '-'}</span></td>
           <td class="col-licenses ${currentUserRole === 'teacher' ? 'hide-licenses' : ''}">${user.licenses || '-'}</td>
-          <td><span class="btn-badge ${statusClass}">${statusText}</span></td>
-          <td><span class="btn-badge ${availClass}">${availText}</span></td>
+          <td><button class="badge-btn ${statusClass}" onclick="toggleStatus(${user.id}, 'status')">${isStatusActive ? 'Active' : 'Inactive'}</button></td>
+          <td><button class="badge-btn ${availClass}" onclick="toggleStatus(${user.id}, 'availability')">${isAvailActive ? 'Active' : 'Inactive'}</button></td>
+          <td>
+            <div class="action-btns">
+              <button class="icon-btn edit" onclick="editUser(${user.id})" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
+              <button class="icon-btn delete" onclick="deleteUser(${user.id})" title="Sil"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </td>
         `;
 
         tbody.appendChild(tr);
       });
     }
 
-    // Departman Renk Sınıfı Eşleştirici
-    function getDeptClass(dept) {
+    // Renk Yardımcı Fonksiyonları
+    function getDepartmentBadgeClass(dept) {
       if (!dept) return '';
       const d = dept.toUpperCase();
-      if (d.includes('MYP')) return 'badge-myp';
-      if (d.includes('PYP')) return 'badge-pyp';
-      if (d.includes('DP')) return 'badge-dp';
+      if (d === 'MYP') return 'bg-myp';
+      if (d === 'PYP') return 'bg-pyp';
+      if (d === 'DP') return 'bg-dp';
       return '';
     }
 
-    // Rol Renk Sınıfı Eşleştirici
-    function getRoleClass(role) {
+    function getRoleBadgeClass(role) {
       if (!role) return '';
       const r = role.toLowerCase();
-      if (r === 'staff') return 'badge-staff';
-      if (r === 'teacher') return 'badge-teacher';
+      if (r === 'staff') return 'bg-staff';
+      if (r === 'teacher') return 'bg-teacher';
       return '';
+    }
+
+    // Status ve Availability Hızlı Değiştirme
+    async function toggleStatus(id, field) {
+      const user = allUsers.find(u => u.id === id);
+      if (!user) return;
+
+      const currentVal = user[field];
+      const newVal = (currentVal === 'Active' || currentVal === true) ? 'Inactive' : 'Active';
+      user[field] = newVal;
+
+      if (supabaseClient) {
+        await supabaseClient.from('users').update({ [field]: newVal }).eq('id', id);
+      }
+
+      applyFilters();
+      showToast(`${field === 'status' ? 'Status' : 'Availability'} güncellendi.`, "success");
+    }
+
+    // Modal İşlemleri
+    function openUserModal() {
+      document.getElementById('userForm').reset();
+      document.getElementById('userId').value = '';
+      document.getElementById('modalTitle').innerText = 'Yeni Kullanıcı Ekle';
+      document.getElementById('userModal').classList.add('active');
+    }
+
+    function closeUserModal() {
+      document.getElementById('userModal').classList.remove('active');
+    }
+
+    function editUser(id) {
+      const user = allUsers.find(u => u.id === id);
+      if (!user) return;
+
+      document.getElementById('userId').value = user.id;
+      document.getElementById('firstName').value = user.first_name || '';
+      document.getElementById('lastName').value = user.last_name || '';
+      document.getElementById('email').value = user.email || '';
+      document.getElementById('role').value = user.role || 'teacher';
+      document.getElementById('department').value = user.department || 'MYP';
+      document.getElementById('licenses').value = user.licenses || '';
+      document.getElementById('status').value = user.status || 'Active';
+      document.getElementById('availability').value = user.availability || 'Active';
+
+      document.getElementById('modalTitle').innerText = 'Kullanıcıyı Düzenle';
+      document.getElementById('userModal').classList.add('active');
+    }
+
+    // Form Gönderme (Ekleme / Güncelleme)
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+
+      const id = document.getElementById('userId').value;
+      const userData = {
+        first_name: document.getElementById('firstName').value,
+        last_name: document.getElementById('lastName').value,
+        email: document.getElementById('email').value,
+        role: document.getElementById('role').value,
+        department: document.getElementById('department').value,
+        licenses: document.getElementById('licenses').value,
+        status: document.getElementById('status').value,
+        availability: document.getElementById('availability').value
+      };
+
+      if (id) {
+        // Güncelleme
+        if (supabaseClient) {
+          await supabaseClient.from('users').update(userData).eq('id', id);
+        }
+        const index = allUsers.findIndex(u => u.id == id);
+        if (index !== -1) allUsers[index] = { id: Number(id), ...userData };
+        showToast("Kullanıcı başarıyla güncellendi.", "success");
+      } else {
+        // Yeni Ekleme
+        const newId = allUsers.length > 0 ? Math.max(...allUsers.map(u => u.id)) + 1 : 1;
+        const newRecord = { id: newId, ...userData };
+
+        if (supabaseClient) {
+          const { data } = await supabaseClient.from('users').insert([userData]).select();
+          if (data && data[0]) newRecord.id = data[0].id;
+        }
+        
+        allUsers.push(newRecord);
+        showToast("Yeni kullanıcı eklendi.", "success");
+      }
+
+      closeUserModal();
+      applyFilters();
+    }
+
+    // Kullanıcı Silme
+    async function deleteUser(id) {
+      if (!confirm("Bu kullanıcıyı silmek istediğinize emin misiniz?")) return;
+
+      if (supabaseClient) {
+        await supabaseClient.from('users').delete().eq('id', id);
+      }
+
+      allUsers = allUsers.filter(u => u.id !== id);
+      applyFilters();
+      showToast("Kullanıcı silindi.", "error");
+    }
+
+    // Toast Bildirim Gösterici
+    function showToast(message, type = "info") {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${message}`;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
     }
   </script>
 </body>
