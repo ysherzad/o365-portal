@@ -142,6 +142,13 @@
         for (let i = 6; i <= 10; i++) { gradesList.push(`MYP-${i}-A`, `MYP-${i}-B`); }
         for (let i = 11; i <= 12; i++) { gradesList.push(`DP-${i}-A`, `DP-${i}-B`); }
 
+        // Pre-rendered Grade and Department Options (Performance Cache)
+        const cachedGradeOptions = ['<option value="">N/A</option>']
+            .concat(gradesList.map(g => `<option value="${g}">${g}</option>`)).join('');
+
+        const cachedDeptOptions = ['PYP Students', 'MYP Students', 'DP Students', 'Teacher', 'Staff']
+            .map(d => `<option value="${d}">${d}</option>`).join('');
+
         // Initialize Grade Filter Dropdown
         const gradeFilterSelect = document.getElementById('gradeFilter');
         gradesList.forEach(g => {
@@ -216,7 +223,8 @@
 
         // 3. LOAD & FILTER DATA
         async function loadDirectory() {
-            const { data, error } = await db.from('users').select('*').order('display_name');
+            // Fetch up to 2000 records to bypass Supabase default 1000 limit
+            const { data, error } = await db.from('users').select('*').range(0, 2000).order('display_name');
 
             if (error) {
                 alert("Error loading data: " + error.message);
@@ -262,7 +270,6 @@
 
         function renderTable() {
             const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
 
             if (filteredUsers.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-slate-400">No matching records found.</td></tr>';
@@ -270,20 +277,22 @@
             }
 
             const isAdmin = userRole === 'maarifadmin';
+            const displayLimit = 100;
+            const usersToRender = filteredUsers.slice(0, displayLimit);
 
-            filteredUsers.forEach(u => {
+            const rows = usersToRender.map(u => {
                 const deptClass = getDeptBadgeClass(u.department);
-
-                // Department Select
-                const deptOptions = ['PYP Students', 'MYP Students', 'DP Students', 'Teacher', 'Staff']
-                    .map(d => `<option value="${d}" ${u.department === d ? 'selected' : ''}>${d}</option>`).join('');
-
-                // Grade Select
                 const isStudent = u.department && u.department.includes('Students');
-                const gradeOptions = ['<option value="">N/A</option>']
-                    .concat(gradesList.map(g => `<option value="${g}" ${u.grade === g ? 'selected' : ''}>${g}</option>`)).join('');
 
-                tbody.innerHTML += `
+                const deptSelect = `<select onchange="updateUserField('${u.email}', 'department', this.value)" class="px-2 py-1 rounded text-xs font-bold ${deptClass} outline-none cursor-pointer">
+                    ${cachedDeptOptions.replace(`value="${u.department}"`, `value="${u.department}" selected`)}
+                </select>`;
+
+                const gradeSelect = `<select onchange="updateUserField('${u.email}', 'grade', this.value)" class="px-2 py-1 border rounded bg-white text-xs outline-none cursor-pointer ${!isStudent ? 'opacity-50' : ''}">
+                    ${cachedGradeOptions.replace(`value="${u.grade}"`, `value="${u.grade}" selected`)}
+                </select>`;
+
+                return `
                     <tr class="hover:bg-slate-50 transition">
                         <td class="p-3 font-semibold text-slate-900">
                             ${isAdmin ? `<input type="text" value="${u.display_name}" onchange="updateUserField('${u.email}', 'display_name', this.value)" class="border-b bg-transparent outline-none w-full focus:border-blue-500">` : u.display_name}
@@ -291,16 +300,8 @@
                         <td class="p-3 text-slate-600">${u.email}</td>
                         <td class="p-3 text-slate-500">${u.created_date || '-'}</td>
                         <td class="p-3 text-slate-500">${u.account_type || '-'}</td>
-                        <td class="p-3">
-                            <select onchange="updateUserField('${u.email}', 'department', this.value)" class="px-2 py-1 rounded text-xs font-bold ${deptClass} outline-none cursor-pointer">
-                                ${deptOptions}
-                            </select>
-                        </td>
-                        <td class="p-3">
-                            <select onchange="updateUserField('${u.email}', 'grade', this.value)" class="px-2 py-1 border rounded bg-white text-xs outline-none cursor-pointer ${!isStudent ? 'opacity-50' : ''}">
-                                ${gradeOptions}
-                            </select>
-                        </td>
+                        <td class="p-3">${deptSelect}</td>
+                        <td class="p-3">${gradeSelect}</td>
                         <td class="p-3 text-slate-500 max-w-xs truncate" title="${u.licenses}">${u.licenses || '-'}</td>
                         <td class="p-3">
                             ${isAdmin ? `
@@ -325,7 +326,14 @@
                         ` : ''}
                     </tr>
                 `;
-            });
+            }).join('');
+
+            let footerNote = '';
+            if (filteredUsers.length > displayLimit) {
+                footerNote = `<tr><td colspan="10" class="p-3 text-center text-xs text-slate-500 bg-slate-50 font-medium">Showing top 100 of ${filteredUsers.length} records. Use search or filters to narrow down results.</td></tr>`;
+            }
+
+            tbody.innerHTML = rows + footerNote;
         }
 
         // 4. UPDATE & DELETE OPERATIONS
