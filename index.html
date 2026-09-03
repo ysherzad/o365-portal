@@ -1,490 +1,231 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Office 365 Directory Portal</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- SheetJS (Excel Engine) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        .dept-pyp { background-color: #FEF08A; color: #854D0E; }
-        .dept-myp { background-color: #FFEDD5; color: #9A3412; }
-        .dept-dp  { background-color: #BAE6FD; color: #075985; }
-        .dept-teacher { background-color: #DCFCE7; color: #166534; }
-        .dept-staff { background-color: #F3E8FF; color: #6B21A8; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kullanıcı Yönetim Paneli</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --color-myp: #E0371D;
+      --color-pyp: #E8B409;
+      --color-dp: #09BFE8;
+      --color-staff: #7C09E8;
+      --color-teacher: #34C28F;
+      --color-active: #28a745;
+      --color-inactive: #dc3545;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f4f6f9;
+      color: #333;
+      padding: 20px;
+      width: 100%;
+    }
+
+    /* Sayfanın enini en büyük yapma (Full Width) */
+    .container {
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 24px;
+      color: #1a1a1a;
+    }
+
+    /* Tablo Konfigürasyonu */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      min-width: 1000px; /* Sütunların sıkışmasını önlemek için */
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+      white-space: nowrap;
+    }
+
+    th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+      color: #495057;
+    }
+
+    tr:hover {
+      background-color: #f1f3f5;
+    }
+
+    /* Buton ve Rozet (Badge) Stilleri */
+    .btn-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff !important; /* Buton içi yazılar BEYAZ */
+      border-radius: 4px;
+      border: none;
+      text-align: center;
+      line-height: 1;
+    }
+
+    /* Departman ve Rol Stilleri */
+    .badge-myp { background-color: var(--color-myp); }
+    .badge-pyp { background-color: var(--color-pyp); }
+    .badge-dp { background-color: var(--color-dp); }
+    .badge-staff { background-color: var(--color-staff); }
+    .badge-teacher { background-color: var(--color-teacher); }
+
+    /* Status ve Availability Buton Stilleri */
+    .btn-active { background-color: var(--color-active); }
+    .btn-inactive { background-color: var(--color-inactive); }
+
+    /* Varsayılan Gizlilik Sınıfı */
+    .hide-licenses {
+      display: none !important;
+    }
+  </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8">
+<body>
 
-    <!-- LOGIN SCREEN -->
-    <div id="loginScreen" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-2xl shadow-md border border-slate-200">
-        <h2 class="text-2xl font-bold text-center text-slate-900 mb-2">School Portal Login</h2>
-        <p class="text-xs text-slate-500 text-center mb-6">Sign in with your Maarif credentials</p>
-        
-        <div id="loginError" class="hidden mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200"></div>
-
-        <form onsubmit="handleLogin(event)" class="space-y-4">
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
-                <input type="email" id="loginEmail" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
-                <input type="password" id="loginPassword" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-            </div>
-            <button type="submit" class="w-full py-2.5 bg-slate-900 text-white font-medium text-sm rounded-lg hover:bg-slate-800 transition">
-                Sign In
-            </button>
-        </form>
+  <div class="container">
+    <h1>Kullanıcı Listesi</h1>
+    
+    <div class="table-wrapper">
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Ad</th>
+            <th>Soyad</th>
+            <th>E-posta</th>
+            <th>Rol</th>
+            <th>Departman</th>
+            <th class="col-licenses">Lisanslar (Licenses)</th>
+            <th>Durum (Status)</th>
+            <th>Kullanılabilirlik (Availability)</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+          <!-- Veriler JavaScript ile buraya eklenecek -->
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    <!-- MAIN APP SCREEN -->
-    <div id="appScreen" class="hidden max-w-7xl mx-auto space-y-6">
-        
-        <!-- Header -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-900">Office 365 Directory Portal</h1>
-                <p class="text-xs text-slate-500">Real-time Student & Staff Management System</p>
-            </div>
-            <div class="flex items-center gap-4">
-                <div class="text-right">
-                    <span id="userRoleBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-slate-100 text-slate-800">Role</span>
-                    <p id="userEmailLabel" class="text-xs text-slate-500 mt-1"></p>
-                </div>
-                <button onclick="handleLogout()" class="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-xs font-medium rounded-lg text-slate-600">
-                    Sign Out
-                </button>
-            </div>
-        </div>
+  <script>
+    // 1. Supabase Bağlantı Bilgilerini Buraya Girin
+    const SUPABASE_URL = "https://gnotendqbgfmlscjnwpz.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdub3RlbmRxYmdmbWxzY2pud3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNDY0NDgsImV4cCI6MjEwMzkyMjQ0OH0.KskgJTM4_Gttl8C5sGFoqDHXbjyxOh5aD2vz34BrZ_s";
 
-        <!-- Admin Controls -->
-        <div id="adminControls" class="hidden bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h2 class="text-sm font-bold text-slate-800 mb-1">Master Directory Import (HQ Excel)</h2>
-            <p class="text-xs text-slate-500 mb-4">Upload the central Excel sheet to update users. Existing grades and departments will be preserved.</p>
-            <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden" onchange="importMasterExcel(event)">
-            <label for="excelFile" class="inline-flex items-center px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 cursor-pointer transition">
-                Import Central Excel File
-            </label>
-        </div>
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        <!-- Toolbar -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
-            <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1">
-                <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Search..." 
-                       class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full md:w-80">
-                
-                <select id="departmentFilter" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none">
-                    <option value="">All Departments</option>
-                    <option value="PYP Students">PYP Students</option>
-                    <option value="MYP Students">MYP Students</option>
-                    <option value="DP Students">DP Students</option>
-                    <option value="Teacher">Teacher</option>
-                    <option value="Staff">Staff</option>
-                </select>
+    // Giriş yapan kullanıcının rolü (Örn: 'teacher', 'admin', 'staff')
+    // Bu bilgiyi oturum açan kullanıcı verisinden çekebilirsiniz
+    const currentUserRole = "teacher"; 
 
-                <select id="gradeFilter" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none">
-                    <option value="">All Grades</option>
-                </select>
-            </div>
+    document.addEventListener("DOMContentLoaded", () => {
+      checkRolePermissions();
+      fetchUsers();
+    });
 
-            <button onclick="exportToExcel()" class="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition">
-                Export Filtered Results
-            </button>
-        </div>
+    // Rol bazlı gösterim yetkileri
+    function checkRolePermissions() {
+      if (currentUserRole === 'teacher') {
+        // Teacher rolündeyse Licenses sütununu hem başlıktan hem içerikten gizle
+        const licenseElements = document.querySelectorAll('.col-licenses');
+        licenseElements.forEach(el => el.classList.add('hide-licenses'));
+      }
+    }
 
-        <!-- Data Table -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
-                        <tr>
-                            <th class="p-3">Display Name</th>
-                            <th class="p-3">Email</th>
-                            <th class="p-3">Create Date</th>
-                            <th class="p-3">Account Type</th>
-                            <th class="p-3">Department</th>
-                            <th class="p-3">Grade</th>
-                            <th class="p-3">Licenses</th>
-                            <th class="p-3">Status</th>
-                            <th id="thAvailability" class="p-3 hidden">Availability</th>
-                            <th id="thActions" class="p-3 text-right hidden">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-100">
-                        <tr><td colspan="10" class="p-8 text-center text-slate-400">Loading directory...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <div id="paginationContainer" class="p-3 bg-slate-50 border-t flex justify-between items-center text-xs text-slate-600"></div>
-        </div>
+    // Supabase'den Verileri Çekme
+    async function fetchUsers() {
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('*');
 
-    </div>
+      if (error) {
+        console.error("Veri çekme hatası:", error);
+        return;
+      }
 
-    <!-- EDIT MODAL (Hızlı Düzenleme Penceresi) -->
-    <div id="editModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-xl shadow-xl border p-6 max-w-md w-full space-y-4">
-            <h3 class="font-bold text-slate-900 text-base" id="modalUserTitle">Edit User</h3>
-            <input type="hidden" id="modalUserEmail">
-            
-            <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Department</label>
-                <select id="modalDept" class="w-full p-2 border rounded-lg text-sm bg-white">
-                    <option value="PYP Students">PYP Students</option>
-                    <option value="MYP Students">MYP Students</option>
-                    <option value="DP Students">DP Students</option>
-                    <option value="Teacher">Teacher</option>
-                    <option value="Staff">Staff</option>
-                </select>
-            </div>
+      renderTable(users);
+    }
 
-            <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Grade</label>
-                <select id="modalGrade" class="w-full p-2 border rounded-lg text-sm bg-white">
-                    <option value="">N/A</option>
-                </select>
-            </div>
+    // Tabloyu Oluşturma
+    function renderTable(users) {
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = '';
 
-            <div id="adminModalFields" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">Status</label>
-                    <select id="modalStatus" class="w-full p-2 border rounded-lg text-sm bg-white">
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-500 mb-1">Availability</label>
-                    <select id="modalAvailability" class="w-full p-2 border rounded-lg text-sm bg-white">
-                        <option value="Available">Available</option>
-                        <option value="Deleted">Deleted</option>
-                    </select>
-                </div>
-            </div>
+      users.forEach(user => {
+        const tr = document.createElement('tr');
 
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="closeEditModal()" class="px-4 py-2 border text-slate-600 rounded-lg text-xs font-semibold">Cancel</button>
-                <button onclick="saveUserModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">Save Changes</button>
-            </div>
-        </div>
-    </div>
+        // Rol ve Departman Rozet Sınıflandırması
+        const roleClass = getRoleClass(user.role);
+        const deptClass = getDeptClass(user.department);
 
-    <script>
-        // KENDİ SUPABASE BİLGİLERİNİZİ EKLEYİN
-        const SUPABASE_URL = "https://gnotendqbgfmlscjnwpz.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdub3RlbmRxYmdmbWxzY2pud3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNDY0NDgsImV4cCI6MjEwMzkyMjQ0OH0.KskgJTM4_Gttl8C5sGFoqDHXbjyxOh5aD2vz34BrZ_s";
+        // Status ve Availability için Renk/Buton Mantığı
+        const statusClass = (user.status === 'Active' || user.status === 'active' || user.status === true) ? 'btn-active' : 'btn-inactive';
+        const statusText = (user.status === 'Active' || user.status === 'active' || user.status === true) ? 'Active' : 'Inactive';
 
-        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const availClass = (user.availability === 'Available' || user.availability === 'active' || user.availability === true) ? 'btn-active' : 'btn-inactive';
+        const availText = (user.availability === 'Available' || user.availability === 'active' || user.availability === true) ? 'Active' : 'Inactive';
 
-        let currentUser = null;
-        let userRole = null;
-        let rawUsers = [];
-        let filteredUsers = [];
-        let currentPage = 1;
-        const pageSize = 30; // Sayfa başına 30 veri gösterilir (donma %0)
+        tr.innerHTML = `
+          <td>${user.id || '-'}</td>
+          <td>${user.first_name || '-'}</td>
+          <td>${user.last_name || '-'}</td>
+          <td>${user.email || '-'}</td>
+          <td><span class="btn-badge ${roleClass}">${user.role || '-'}</span></td>
+          <td><span class="btn-badge ${deptClass}">${user.department || '-'}</span></td>
+          <td class="col-licenses ${currentUserRole === 'teacher' ? 'hide-licenses' : ''}">${user.licenses || '-'}</td>
+          <td><span class="btn-badge ${statusClass}">${statusText}</span></td>
+          <td><span class="btn-badge ${availClass}">${availText}</span></td>
+        `;
 
-        const gradesList = [];
-        for (let i = 1; i <= 5; i++) { gradesList.push(`PYP-${i}-A`, `PYP-${i}-B`); }
-        for (let i = 6; i <= 10; i++) { gradesList.push(`MYP-${i}-A`, `MYP-${i}-B`); }
-        for (let i = 11; i <= 12; i++) { gradesList.push(`DP-${i}-A`, `DP-${i}-B`); }
+        tbody.appendChild(tr);
+      });
+    }
 
-        // Popüle Et Dropdown'ları
-        const gradeFilterSelect = document.getElementById('gradeFilter');
-        const modalGradeSelect = document.getElementById('modalGrade');
-        gradesList.forEach(g => {
-            gradeFilterSelect.innerHTML += `<option value="${g}">${g}</option>`;
-            modalGradeSelect.innerHTML += `<option value="${g}">${g}</option>`;
-        });
+    // Departman Renk Sınıfı Eşleştirici
+    function getDeptClass(dept) {
+      if (!dept) return '';
+      const d = dept.toUpperCase();
+      if (d.includes('MYP')) return 'badge-myp';
+      if (d.includes('PYP')) return 'badge-pyp';
+      if (d.includes('DP')) return 'badge-dp';
+      return '';
+    }
 
-        // AUTH
-        async function handleLogin(e) {
-            e.preventDefault();
-            document.getElementById('loginError').classList.add('hidden');
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-
-            const { data, error } = await db.auth.signInWithPassword({ email, password });
-            if (error) { showError(error.message); return; }
-
-            currentUser = data.user;
-            await fetchUserRole();
-            showApp();
-        }
-
-        async function fetchUserRole() {
-            const { data } = await db.from('user_roles').select('role').eq('user_id', currentUser.id).single();
-            userRole = (data && data.role) ? data.role : 'teacher';
-        }
-
-        async function handleLogout() {
-            await db.auth.signOut();
-            location.reload();
-        }
-
-        function showError(msg) {
-            const el = document.getElementById('loginError');
-            el.innerText = msg;
-            el.classList.remove('hidden');
-        }
-
-        async function checkSession() {
-            const { data } = await db.auth.getSession();
-            if (data.session) {
-                currentUser = data.session.user;
-                await fetchUserRole();
-                showApp();
-            }
-        }
-
-        function showApp() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('appScreen').classList.remove('hidden');
-
-            document.getElementById('userEmailLabel').innerText = currentUser.email;
-            const badge = document.getElementById('userRoleBadge');
-            badge.innerText = userRole;
-
-            if (userRole === 'maarifadmin') {
-                badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-purple-100 text-purple-800";
-                document.getElementById('adminControls').classList.remove('hidden');
-                document.getElementById('thAvailability').classList.remove('hidden');
-                document.getElementById('thActions').classList.remove('hidden');
-            } else {
-                badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-100 text-emerald-800";
-                document.getElementById('adminModalFields').classList.add('hidden');
-            }
-
-            loadDirectory();
-        }
-
-        // LOAD DATA
-        async function loadDirectory() {
-            const { data, error } = await db.from('users').select('*').range(0, 2000).order('display_name');
-            if (error) { alert("Error loading data: " + error.message); return; }
-            rawUsers = data || [];
-            applyFilters();
-        }
-
-        function applyFilters() {
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            const dept = document.getElementById('departmentFilter').value;
-            const grade = document.getElementById('gradeFilter').value;
-
-            filteredUsers = rawUsers.filter(u => {
-                const matchesSearch = 
-                    u.display_name.toLowerCase().includes(search) ||
-                    u.email.toLowerCase().includes(search) ||
-                    (u.account_type || '').toLowerCase().includes(search) ||
-                    (u.licenses || '').toLowerCase().includes(search) ||
-                    (u.department || '').toLowerCase().includes(search) ||
-                    (u.grade || '').toLowerCase().includes(search);
-
-                const matchesDept = dept === '' || u.department === dept;
-                const matchesGrade = grade === '' || u.grade === grade;
-
-                return matchesSearch && matchesDept && matchesGrade;
-            });
-
-            currentPage = 1;
-            renderTable();
-        }
-
-        function getDeptBadgeClass(dept) {
-            switch(dept) {
-                case 'PYP Students': return 'dept-pyp';
-                case 'MYP Students': return 'dept-myp';
-                case 'DP Students': return 'dept-dp';
-                case 'Teacher': return 'dept-teacher';
-                default: return 'dept-staff';
-            }
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('tableBody');
-
-            if (filteredUsers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-slate-400">No matching records found.</td></tr>';
-                document.getElementById('paginationContainer').innerHTML = '';
-                return;
-            }
-
-            const isAdmin = userRole === 'maarifadmin';
-            const totalPages = Math.ceil(filteredUsers.length / pageSize);
-            const startIndex = (currentPage - 1) * pageSize;
-            const usersToRender = filteredUsers.slice(startIndex, startIndex + pageSize);
-
-            let html = '';
-            for (let i = 0; i < usersToRender.length; i++) {
-                const u = usersToRender[i];
-                const deptClass = getDeptBadgeClass(u.department);
-
-                html += `
-                    <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openEditModal('${u.email}')">
-                        <td class="p-3 font-semibold text-slate-900">${u.display_name}</td>
-                        <td class="p-3 text-slate-600">${u.email}</td>
-                        <td class="p-3 text-slate-500">${u.created_date || '-'}</td>
-                        <td class="p-3 text-slate-500">${u.account_type || '-'}</td>
-                        <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-bold ${deptClass}">${u.department || 'N/A'}</span></td>
-                        <td class="p-3"><span class="px-2 py-0.5 rounded border text-xs font-medium bg-white">${u.grade || 'N/A'}</span></td>
-                        <td class="p-3 text-slate-500 max-w-xs truncate" title="${u.licenses}">${u.licenses || '-'}</td>
-                        <td class="p-3"><span class="${u.status === 'Active' ? 'text-emerald-600' : 'text-red-500'} font-semibold">${u.status}</span></td>
-                        ${isAdmin ? `<td class="p-3 text-slate-500">${u.availability || 'Available'}</td>` : ''}
-                        ${isAdmin ? `
-                            <td class="p-3 text-right" onclick="event.stopPropagation()">
-                                <button onclick="deleteUser('${u.email}')" class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded">
-                                    Delete
-                                </button>
-                            </td>
-                        ` : ''}
-                    </tr>
-                `;
-            }
-
-            tbody.innerHTML = html;
-
-            // Render Pagination
-            document.getElementById('paginationContainer').innerHTML = `
-                <div>Showing <b>${startIndex + 1}</b> to <b>${Math.min(startIndex + pageSize, filteredUsers.length)}</b> of <b>${filteredUsers.length}</b> entries</div>
-                <div class="flex gap-2">
-                    <button onclick="changePage(-1)" ${currentPage === 1 ? 'disabled class="opacity-40 cursor-not-allowed px-3 py-1 border rounded bg-white"' : 'class="px-3 py-1 border rounded bg-white hover:bg-slate-100"'}>Previous</button>
-                    <span class="px-3 py-1 font-bold">Page ${currentPage} of ${totalPages}</span>
-                    <button onclick="changePage(1)" ${currentPage === totalPages ? 'disabled class="opacity-40 cursor-not-allowed px-3 py-1 border rounded bg-white"' : 'class="px-3 py-1 border rounded bg-white hover:bg-slate-100"'}>Next</button>
-                </div>
-            `;
-        }
-
-        function changePage(direction) {
-            currentPage += direction;
-            renderTable();
-        }
-
-        // EDIT MODAL HANDLERS
-        function openEditModal(email) {
-            const u = rawUsers.find(x => x.email === email);
-            if (!u) return;
-
-            document.getElementById('modalUserTitle').innerText = `Edit: ${u.display_name}`;
-            document.getElementById('modalUserEmail').value = u.email;
-            document.getElementById('modalDept').value = u.department || 'Staff';
-            document.getElementById('modalGrade').value = u.grade || '';
-            document.getElementById('modalStatus').value = u.status || 'Active';
-            document.getElementById('modalAvailability').value = u.availability || 'Available';
-
-            document.getElementById('editModal').classList.remove('hidden');
-        }
-
-        function closeEditModal() {
-            document.getElementById('editModal').classList.add('hidden');
-        }
-
-        async function saveUserModal() {
-            const email = document.getElementById('modalUserEmail').value;
-            const dept = document.getElementById('modalDept').value;
-            const grade = document.getElementById('modalGrade').value;
-            const status = document.getElementById('modalStatus').value;
-            const availability = document.getElementById('modalAvailability').value;
-
-            const updatePayload = { department: dept, grade: grade };
-            if (userRole === 'maarifadmin') {
-                updatePayload.status = status;
-                updatePayload.availability = availability;
-            }
-
-            const { error } = await db.from('users').update(updatePayload).eq('email', email);
-
-            if (error) {
-                alert("Update failed: " + error.message);
-            } else {
-                const u = rawUsers.find(x => x.email === email);
-                if (u) {
-                    u.department = dept;
-                    u.grade = grade;
-                    if (userRole === 'maarifadmin') {
-                        u.status = status;
-                        u.availability = availability;
-                    }
-                }
-                closeEditModal();
-                applyFilters();
-            }
-        }
-
-        // DELETE
-        async function deleteUser(email) {
-            if (!confirm(`Are you sure you want to permanently delete user: ${email}?`)) return;
-
-            const { error } = await db.from('users').delete().eq('email', email);
-            if (error) { alert("Deletion failed: " + error.message); }
-            else {
-                rawUsers = rawUsers.filter(u => u.email !== email);
-                applyFilters();
-            }
-        }
-
-        // IMPORT & EXPORT
-        async function importMasterExcel(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async function(evt) {
-                const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-
-                const records = json.map(row => {
-                    const email = (row['Email'] || '').trim().toLowerCase();
-                    const rawTitle = (row['Title'] || '').trim();
-                    let dept = 'Staff';
-                    if (/ogrenci|öğrenci/i.test(rawTitle)) dept = 'PYP Students';
-                    else if (/ogretmen|öğretmen/i.test(rawTitle)) dept = 'Teacher';
-
-                    const existing = rawUsers.find(u => u.email === email);
-
-                    return {
-                        email: email,
-                        display_name: row['Display name'] || `${row['First name'] || ''} ${row['Last name'] || ''}`.trim(),
-                        created_date: row['When created'] || '',
-                        account_type: rawTitle || 'N/A',
-                        licenses: row['Licenses'] || '',
-                        department: existing ? existing.department : dept,
-                        grade: existing ? existing.grade : '',
-                        status: 'Active',
-                        availability: 'Available'
-                    };
-                });
-
-                const { error } = await db.from('users').upsert(records, { onConflict: 'email' });
-                if (error) { alert("Import failed: " + error.message); }
-                else { alert(`Successfully imported ${records.length} records!`); loadDirectory(); }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        function exportToExcel() {
-            if (filteredUsers.length === 0) { alert("No filtered data to export."); return; }
-            const exportData = filteredUsers.map(u => ({
-                'Display Name': u.display_name,
-                'Email': u.email,
-                'Create Date': u.created_date,
-                'Account Type': u.account_type,
-                'Department': u.department,
-                'Grade': u.grade || 'N/A',
-                'Licenses': u.licenses,
-                'Status': u.status
-            }));
-
-            const worksheet = XLSX.utils.json_to_sheet(exportData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Directory");
-            XLSX.writeFile(workbook, "Directory_Export.xlsx");
-        }
-
-        checkSession();
-    </script>
+    // Rol Renk Sınıfı Eşleştirici
+    function getRoleClass(role) {
+      if (!role) return '';
+      const r = role.toLowerCase();
+      if (r === 'staff') return 'badge-staff';
+      if (r === 'teacher') return 'badge-teacher';
+      return '';
+    }
+  </script>
 </body>
 </html>
