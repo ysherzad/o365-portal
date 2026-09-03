@@ -11,7 +11,7 @@
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* İstenen Tam Özel Renk Kodları ve Beyaz Yazı Stili */
+        /* Custom Department Color Styles */
         .dept-kg  { background-color: #BF227B !important; color: #ffffff !important; font-weight: 600; }
         .dept-pyp { background-color: #E8B409 !important; color: #ffffff !important; font-weight: 600; }
         .dept-myp { background-color: #E0371D !important; color: #ffffff !important; font-weight: 600; }
@@ -109,7 +109,7 @@
                             <th class="py-2.5 px-2.5">Display Name</th>
                             <th class="py-2.5 px-2.5">Email</th>
                             <th class="py-2.5 px-2.5">Create Date</th>
-                            <th class="py-2.5 px-2.5">Account Type</th>
+                            <th id="thAccountType" class="py-2.5 px-2.5 hidden">Account Type</th>
                             <th class="py-2.5 px-2.5">Department</th>
                             <th class="py-2.5 px-2.5">Grade</th>
                             <th id="thLicenses" class="py-2.5 px-2.5 hidden">Licenses</th>
@@ -216,11 +216,14 @@
             if (userRole === 'maarifadmin') {
                 badge.className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-purple-100 text-purple-800";
                 document.getElementById('adminControls').classList.remove('hidden');
+                document.getElementById('thAccountType').classList.remove('hidden');
                 document.getElementById('thLicenses').classList.remove('hidden');
                 document.getElementById('thAvailability').classList.remove('hidden');
                 document.getElementById('thActions').classList.remove('hidden');
             } else {
                 badge.className = "px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-emerald-100 text-emerald-800";
+                document.getElementById('adminControls').classList.add('hidden');
+                document.getElementById('thAccountType').classList.add('hidden');
                 document.getElementById('thLicenses').classList.add('hidden');
                 document.getElementById('thAvailability').classList.add('hidden');
                 document.getElementById('thActions').classList.add('hidden');
@@ -255,13 +258,17 @@
             const grade = document.getElementById('gradeFilter').value;
 
             filteredUsers = rawUsers.filter(u => {
+                // Expanded search matching across ALL table columns
                 const matchesSearch = 
                     (u.display_name || '').toLowerCase().includes(search) ||
                     (u.email || '').toLowerCase().includes(search) ||
+                    (u.created_date || '').toLowerCase().includes(search) ||
                     (u.account_type || '').toLowerCase().includes(search) ||
-                    (u.licenses || '').toLowerCase().includes(search) ||
                     (u.department || '').toLowerCase().includes(search) ||
-                    (u.grade || '').toLowerCase().includes(search);
+                    (u.grade || '').toLowerCase().includes(search) ||
+                    (u.licenses || '').toLowerCase().includes(search) ||
+                    (u.status || '').toLowerCase().includes(search) ||
+                    (u.availability || '').toLowerCase().includes(search);
 
                 const matchesDept = dept === '' || u.department === dept;
                 const matchesGrade = grade === '' || u.grade === grade;
@@ -309,21 +316,19 @@
                 return `
                     <tr class="hover:bg-slate-50 transition">
                         <td class="py-2 px-2.5 font-semibold text-slate-900 max-w-[150px] truncate">
-                            ${isAdmin ? `<input type="text" value="${u.display_name || ''}" onchange="updateUserField('${u.email}', 'display_name', this.value)" class="border-b bg-transparent outline-none w-full text-xs focus:border-blue-500">` : `<span title="${u.display_name || ''}">${u.display_name || '-'}</span>`}
+                            <input type="text" value="${u.display_name || ''}" onchange="updateUserField('${u.email}', 'display_name', this.value)" class="border-b bg-transparent outline-none w-full text-xs focus:border-blue-500">
                         </td>
                         <td class="py-2 px-2.5 text-slate-600 max-w-[180px] truncate" title="${u.email}">${u.email}</td>
                         <td class="py-2 px-2.5 text-slate-500 text-[11px]">${u.created_date || '-'}</td>
-                        <td class="py-2 px-2.5 text-slate-500 max-w-[120px] truncate text-[11px]" title="${u.account_type || ''}">${u.account_type || '-'}</td>
+                        ${isAdmin ? `<td class="py-2 px-2.5 text-slate-500 max-w-[120px] truncate text-[11px]" title="${u.account_type || ''}">${u.account_type || '-'}</td>` : ''}
                         <td class="py-2 px-2.5 min-w-[110px]">${deptSelect}</td>
                         <td class="py-2 px-2.5 min-w-[100px]">${gradeSelect}</td>
                         ${isAdmin ? `<td class="py-2 px-2.5 text-slate-500 max-w-[130px] truncate text-[11px]" title="${u.licenses || ''}">${u.licenses || '-'}</td>` : ''}
                         <td class="py-2 px-2.5">
-                            ${isAdmin ? `
-                                <select onchange="updateUserField('${u.email}', 'status', this.value)" class="px-1.5 py-1 border rounded bg-white text-[11px] font-semibold ${u.status === 'Active' ? 'text-emerald-700' : 'text-red-600'}">
-                                    <option value="Active" ${u.status === 'Active' ? 'selected' : ''}>Active</option>
-                                    <option value="Inactive" ${u.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
-                                </select>
-                            ` : `<span class="${u.status === 'Active' ? 'text-emerald-600' : 'text-red-500'} font-semibold text-[11px]">${u.status || 'Active'}</span>`}
+                            <select onchange="updateUserField('${u.email}', 'status', this.value)" class="px-1.5 py-1 border rounded bg-white text-[11px] font-semibold ${u.status === 'Active' ? 'text-emerald-700' : 'text-red-600'}">
+                                <option value="Active" ${u.status === 'Active' ? 'selected' : ''}>Active</option>
+                                <option value="Inactive" ${u.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                            </select>
                         </td>
                         ${isAdmin ? `
                             <td class="py-2 px-2.5">
@@ -440,12 +445,12 @@
                     'Display Name': u.display_name,
                     'Email': u.email,
                     'Create Date': u.created_date,
-                    'Account Type': u.account_type,
                     'Department': u.department,
                     'Grade': u.grade || 'N/A',
                     'Status': u.status
                 };
                 if (isAdmin) {
+                    row['Account Type'] = u.account_type;
                     row['Licenses'] = u.licenses;
                     row['Availability'] = u.availability;
                 }
