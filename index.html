@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Office 365 Management Portal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (Excel Engine) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .dept-pyp { background-color: #FEF08A; color: #854D0E; } /* Yellow */
+        .dept-myp { background-color: #FFEDD5; color: #9A3412; } /* Orange */
+        .dept-dp  { background-color: #BAE6FD; color: #075985; } /* Light Blue */
+        .dept-teacher { background-color: #DCFCE7; color: #166534; } /* Green */
+        .dept-staff { background-color: #F3E8FF; color: #6B21A8; } /* Purple */
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8">
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-2xl shadow-md border border-slate-200">
+        <h2 class="text-2xl font-bold text-center text-slate-900 mb-2">School Portal Login</h2>
+        <p class="text-xs text-slate-500 text-center mb-6">Sign in with your Maarif credentials</p>
+        
+        <div id="loginError" class="hidden mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200"></div>
+
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                <input type="email" id="loginEmail" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+                <input type="password" id="loginPassword" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <button type="submit" class="w-full py-2.5 bg-slate-900 text-white font-medium text-sm rounded-lg hover:bg-slate-800 transition">
+                Sign In
+            </button>
+        </form>
+    </div>
+
+    <!-- MAIN APP SCREEN -->
+    <div id="appScreen" class="hidden max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Office 365 Directory Portal</h1>
+                <p class="text-xs text-slate-500">Real-time Student & Staff Management System</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <span id="userRoleBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-slate-100 text-slate-800">Role</span>
+                    <p id="userEmailLabel" class="text-xs text-slate-500 mt-1"></p>
+                </div>
+                <button onclick="handleLogout()" class="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-xs font-medium rounded-lg text-slate-600">
+                    Sign Out
+                </button>
+            </div>
+        </div>
+
+        <!-- Admin Controls: Upload Master Excel -->
+        <div id="adminControls" class="hidden bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-sm font-bold text-slate-800 mb-1">Master Directory Import (HQ Excel)</h2>
+            <p class="text-xs text-slate-500 mb-4">Upload the central Excel sheet to update users. Existing grades and departments will be preserved.</p>
+            <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden" onchange="importMasterExcel(event)">
+            <label for="excelFile" class="inline-flex items-center px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 cursor-pointer transition">
+                Import Central Excel File
+            </label>
+        </div>
+
+        <!-- Search & Export Toolbar -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
+            <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1">
+                <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Search across all fields..." 
+                       class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full md:w-80">
+                
+                <select id="departmentFilter" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none">
+                    <option value="">All Departments</option>
+                    <option value="PYP Students">PYP Students</option>
+                    <option value="MYP Students">MYP Students</option>
+                    <option value="DP Students">DP Students</option>
+                    <option value="Teacher">Teacher</option>
+                    <option value="Staff">Staff</option>
+                </select>
+
+                <select id="gradeFilter" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none">
+                    <option value="">All Grades</option>
+                </select>
+            </div>
+
+            <button onclick="exportToExcel()" class="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-2">
+                Export Filtered Results to Excel
+            </button>
+        </div>
+
+        <!-- Data Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                        <tr>
+                            <th class="p-3">Display Name</th>
+                            <th class="p-3">Email</th>
+                            <th class="p-3">Create Date</th>
+                            <th class="p-3">Account Type</th>
+                            <th class="p-3">Department</th>
+                            <th class="p-3">Grade</th>
+                            <th class="p-3">Licenses</th>
+                            <th class="p-3">Status</th>
+                            <th id="thAvailability" class="p-3 hidden">Availability</th>
+                            <th id="thActions" class="p-3 text-right hidden">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100">
+                        <tr><td colspan="10" class="p-8 text-center text-slate-400">Loading directory...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // REPLACE WITH YOUR SUPABASE CREDENTIALS
+        const SUPABASE_URL = "https://gnotendqbgfmlscjnwpz.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdub3RlbmRxYmdmbWxzY2pud3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNDY0NDgsImV4cCI6MjEwMzkyMjQ0OH0.KskgJTM4_Gttl8C5sGFoqDHXbjyxOh5aD2vz34BrZ_s";
+
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = null;
+        let userRole = null; // 'maarifadmin' or 'teacher'
+        let rawUsers = [];
+        let filteredUsers = [];
+
+        // Grade Options Generation
+        const gradesList = [];
+        for (let i = 1; i <= 5; i++) { gradesList.push(`PYP-${i}-A`, `PYP-${i}-B`); }
+        for (let i = 6; i <= 10; i++) { gradesList.push(`MYP-${i}-A`, `MYP-${i}-B`); }
+        for (let i = 11; i <= 12; i++) { gradesList.push(`DP-${i}-A`, `DP-${i}-B`); }
+
+        // Initialize Grade Filter Dropdown
+        const gradeFilterSelect = document.getElementById('gradeFilter');
+        gradesList.forEach(g => {
+            gradeFilterSelect.innerHTML += `<option value="${g}">${g}</option>`;
+        });
+
+        // 1. AUTHENTICATION HANDLERS
+        async function handleLogin(e) {
+            e.preventDefault();
+            document.getElementById('loginError').classList.add('hidden');
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const { data, error } = await db.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                showError(error.message);
+                return;
+            }
+
+            currentUser = data.user;
+            await fetchUserRole();
+            showApp();
+        }
+
+        async function fetchUserRole() {
+            const { data, error } = await db.from('user_roles').select('role').eq('user_id', currentUser.id).single();
+            userRole = (data && data.role) ? data.role : 'teacher';
+        }
+
+        async function handleLogout() {
+            await db.auth.signOut();
+            location.reload();
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('loginError');
+            el.innerText = msg;
+            el.classList.remove('hidden');
+        }
+
+        async function checkSession() {
+            const { data } = await db.auth.getSession();
+            if (data.session) {
+                currentUser = data.session.user;
+                await fetchUserRole();
+                showApp();
+            }
+        }
+
+        // 2. UI RENDER CONTROL
+        function showApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+
+            document.getElementById('userEmailLabel').innerText = currentUser.email;
+            const badge = document.getElementById('userRoleBadge');
+            badge.innerText = userRole;
+
+            if (userRole === 'maarifadmin') {
+                badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-purple-100 text-purple-800";
+                document.getElementById('adminControls').classList.remove('hidden');
+                document.getElementById('thAvailability').classList.remove('hidden');
+                document.getElementById('thActions').classList.remove('hidden');
+            } else {
+                badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-100 text-emerald-800";
+            }
+
+            loadDirectory();
+        }
+
+        // 3. LOAD & FILTER DATA
+        async function loadDirectory() {
+            const { data, error } = await db.from('users').select('*').order('display_name');
+
+            if (error) {
+                alert("Error loading data: " + error.message);
+                return;
+            }
+
+            rawUsers = data || [];
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const dept = document.getElementById('departmentFilter').value;
+            const grade = document.getElementById('gradeFilter').value;
+
+            filteredUsers = rawUsers.filter(u => {
+                const matchesSearch = 
+                    u.display_name.toLowerCase().includes(search) ||
+                    u.email.toLowerCase().includes(search) ||
+                    (u.account_type || '').toLowerCase().includes(search) ||
+                    (u.licenses || '').toLowerCase().includes(search) ||
+                    (u.department || '').toLowerCase().includes(search) ||
+                    (u.grade || '').toLowerCase().includes(search);
+
+                const matchesDept = dept === '' || u.department === dept;
+                const matchesGrade = grade === '' || u.grade === grade;
+
+                return matchesSearch && matchesDept && matchesGrade;
+            });
+
+            renderTable();
+        }
+
+        function getDeptBadgeClass(dept) {
+            switch(dept) {
+                case 'PYP Students': return 'dept-pyp';
+                case 'MYP Students': return 'dept-myp';
+                case 'DP Students': return 'dept-dp';
+                case 'Teacher': return 'dept-teacher';
+                default: return 'dept-staff';
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-slate-400">No matching records found.</td></tr>';
+                return;
+            }
+
+            const isAdmin = userRole === 'maarifadmin';
+
+            filteredUsers.forEach(u => {
+                const deptClass = getDeptBadgeClass(u.department);
+
+                // Department Select
+                const deptOptions = ['PYP Students', 'MYP Students', 'DP Students', 'Teacher', 'Staff']
+                    .map(d => `<option value="${d}" ${u.department === d ? 'selected' : ''}>${d}</option>`).join('');
+
+                // Grade Select
+                const isStudent = u.department && u.department.includes('Students');
+                const gradeOptions = ['<option value="">N/A</option>']
+                    .concat(gradesList.map(g => `<option value="${g}" ${u.grade === g ? 'selected' : ''}>${g}</option>`)).join('');
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3 font-semibold text-slate-900">
+                            ${isAdmin ? `<input type="text" value="${u.display_name}" onchange="updateUserField('${u.email}', 'display_name', this.value)" class="border-b bg-transparent outline-none w-full focus:border-blue-500">` : u.display_name}
+                        </td>
+                        <td class="p-3 text-slate-600">${u.email}</td>
+                        <td class="p-3 text-slate-500">${u.created_date || '-'}</td>
+                        <td class="p-3 text-slate-500">${u.account_type || '-'}</td>
+                        <td class="p-3">
+                            <select onchange="updateUserField('${u.email}', 'department', this.value)" class="px-2 py-1 rounded text-xs font-bold ${deptClass} outline-none cursor-pointer">
+                                ${deptOptions}
+                            </select>
+                        </td>
+                        <td class="p-3">
+                            <select onchange="updateUserField('${u.email}', 'grade', this.value)" class="px-2 py-1 border rounded bg-white text-xs outline-none cursor-pointer ${!isStudent ? 'opacity-50' : ''}">
+                                ${gradeOptions}
+                            </select>
+                        </td>
+                        <td class="p-3 text-slate-500 max-w-xs truncate" title="${u.licenses}">${u.licenses || '-'}</td>
+                        <td class="p-3">
+                            ${isAdmin ? `
+                                <select onchange="updateUserField('${u.email}', 'status', this.value)" class="px-2 py-1 border rounded bg-white text-xs font-semibold ${u.status === 'Active' ? 'text-emerald-700' : 'text-red-600'}">
+                                    <option value="Active" ${u.status === 'Active' ? 'selected' : ''}>Active</option>
+                                    <option value="Inactive" ${u.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                                </select>
+                            ` : `<span class="${u.status === 'Active' ? 'text-emerald-600' : 'text-red-500'} font-semibold">${u.status}</span>`}
+                        </td>
+                        ${isAdmin ? `
+                            <td class="p-3">
+                                <select onchange="updateUserField('${u.email}', 'availability', this.value)" class="px-2 py-1 border rounded bg-white text-xs font-semibold ${u.availability === 'Available' ? 'text-blue-700' : 'text-slate-400'}">
+                                    <option value="Available" ${u.availability === 'Available' ? 'selected' : ''}>Available</option>
+                                    <option value="Deleted" ${u.availability === 'Deleted' ? 'selected' : ''}>Deleted</option>
+                                </select>
+                            </td>
+                            <td class="p-3 text-right">
+                                <button onclick="deleteUser('${u.email}')" class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded">
+                                    Delete
+                                </button>
+                            </td>
+                        ` : ''}
+                    </tr>
+                `;
+            });
+        }
+
+        // 4. UPDATE & DELETE OPERATIONS
+        async function updateUserField(email, field, value) {
+            const updatePayload = {};
+            updatePayload[field] = value;
+
+            const { error } = await db.from('users').update(updatePayload).eq('email', email);
+
+            if (error) {
+                alert("Update failed: " + error.message);
+                loadDirectory();
+            } else {
+                const user = rawUsers.find(u => u.email === email);
+                if (user) user[field] = value;
+                applyFilters();
+            }
+        }
+
+        async function deleteUser(email) {
+            if (!confirm(`Are you sure you want to permanently delete user: ${email}?`)) return;
+
+            const { error } = await db.from('users').delete().eq('email', email);
+
+            if (error) {
+                alert("Deletion failed: " + error.message);
+            } else {
+                rawUsers = rawUsers.filter(u => u.email !== email);
+                applyFilters();
+            }
+        }
+
+        // 5. IMPORT MASTER EXCEL (ADMIN ONLY)
+        async function importMasterExcel(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+                const records = json.map(row => {
+                    const email = (row['Email'] || '').trim().toLowerCase();
+                    const rawTitle = (row['Title'] || '').trim();
+                    
+                    let dept = 'Staff';
+                    if (/ogrenci|öğrenci/i.test(rawTitle)) dept = 'PYP Students';
+                    else if (/ogretmen|öğretmen/i.test(rawTitle)) dept = 'Teacher';
+
+                    const existing = rawUsers.find(u => u.email === email);
+
+                    return {
+                        email: email,
+                        display_name: row['Display name'] || `${row['First name'] || ''} ${row['Last name'] || ''}`.trim(),
+                        created_date: row['When created'] || '',
+                        account_type: rawTitle || 'N/A',
+                        licenses: row['Licenses'] || '',
+                        department: existing ? existing.department : dept,
+                        grade: existing ? existing.grade : '',
+                        status: 'Active',
+                        availability: 'Available'
+                    };
+                });
+
+                const { error } = await db.from('users').upsert(records, { onConflict: 'email' });
+
+                if (error) {
+                    alert("Import failed: " + error.message);
+                } else {
+                    alert(`Successfully imported ${records.length} records!`);
+                    loadDirectory();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 6. DYNAMIC EXCEL EXPORT
+        function exportToExcel() {
+            if (filteredUsers.length === 0) {
+                alert("No filtered data available to export.");
+                return;
+            }
+
+            const isAdmin = userRole === 'maarifadmin';
+
+            const exportData = filteredUsers.map(u => {
+                const row = {
+                    'Display Name': u.display_name,
+                    'Email': u.email,
+                    'Create Date': u.created_date,
+                    'Account Type': u.account_type,
+                    'Department': u.department,
+                    'Grade': u.grade || 'N/A',
+                    'Licenses': u.licenses,
+                    'Status': u.status
+                };
+                if (isAdmin) {
+                    row['Availability'] = u.availability;
+                }
+                return row;
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered_Directory");
+
+            const activeDept = document.getElementById('departmentFilter').value;
+            const activeGrade = document.getElementById('gradeFilter').value;
+            let fileName = "Directory_Export";
+            if (activeGrade) fileName += `_${activeGrade}`;
+            else if (activeDept) fileName += `_${activeDept.replace(/\s+/g, '_')}`;
+
+            XLSX.writeFile(workbook, `${fileName}.xlsx`);
+        }
+
+        // Initialize Application Session
+        checkSession();
+    </script>
+</body>
+</html>
