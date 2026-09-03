@@ -1,796 +1,461 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kullanıcı Yönetim Paneli</title>
-  
-  <!-- Supabase JS CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- FontAwesome İkonları -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <style>
-    /* ==========================================
-       1. GLOBAL TEMA VE DEĞİŞKENLER
-       ========================================== */
-    :root {
-      --color-myp: #E0371D;
-      --color-pyp: #E8B409;
-      --color-dp: #09BFE8;
-      --color-staff: #7C09E8;
-      --color-teacher: #34C28F;
-      --color-active: #28a745;
-      --color-inactive: #dc3545;
-      
-      --bg-body: #f4f6f9;
-      --bg-card: #ffffff;
-      --text-dark: #2c3e50;
-      --border-color: #e2e8f0;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg-body);
-      color: var(--text-dark);
-      padding: 20px;
-      width: 100%;
-      min-height: 100vh;
-    }
-
-    /* ==========================================
-       2. DÜZEN VE KONTEYNER (FULL WIDTH)
-       ========================================== */
-    .app-container {
-      width: 100%;
-      max-width: 100%;
-      background: var(--bg-card);
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    }
-
-    /* Üst Başlık ve Oturum Bilgisi */
-    .header-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid var(--border-color);
-    }
-
-    .header-bar h1 {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--text-dark);
-    }
-
-    .role-switcher {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 14px;
-      background: #f8f9fa;
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: 1px solid var(--border-color);
-    }
-
-    /* ==========================================
-       3. FİLTRE VE ARAMA BARI
-       ========================================== */
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .search-filter-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      flex: 1;
-    }
-
-    .input-control, .select-control {
-      padding: 10px 14px;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .input-control:focus, .select-control:focus {
-      border-color: var(--color-dp);
-    }
-
-    .search-box {
-      min-width: 250px;
-      flex: 1;
-    }
-
-    /* ==========================================
-       4. BUTONLAR VE İŞLEM ELAMANLARI
-       ========================================== */
-    .btn {
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: 600;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: opacity 0.2s, transform 0.1s;
-    }
-
-    .btn:active {
-      transform: scale(0.98);
-    }
-
-    .btn-primary {
-      background-color: #0d6efd;
-      color: #ffffff;
-    }
-
-    .btn-danger {
-      background-color: var(--color-inactive);
-      color: #ffffff;
-    }
-
-    .btn-secondary {
-      background-color: #6c757d;
-      color: #ffffff;
-    }
-
-    /* Özel Durum / Departman Rozet Butonları */
-    .badge-btn {
-      display: inline-block;
-      padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #ffffff !important; /* BUTON YAZILARI BEYAZ */
-      border-radius: 20px;
-      border: none;
-      text-align: center;
-      white-space: nowrap;
-      text-decoration: none;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    }
-
-    /* Departman Renkleri */
-    .bg-myp { background-color: var(--color-myp) !important; }
-    .bg-pyp { background-color: var(--color-pyp) !important; }
-    .bg-dp { background-color: var(--color-dp) !important; }
-
-    /* Rol Renkleri */
-    .bg-staff { background-color: var(--color-staff) !important; }
-    .bg-teacher { background-color: var(--color-teacher) !important; }
-
-    /* Status & Availability Renkleri */
-    .bg-active { background-color: var(--color-active) !important; cursor: pointer; }
-    .bg-inactive { background-color: var(--color-inactive) !important; cursor: pointer; }
-
-    /* ==========================================
-       5. TABLO DÜZENİ
-       ========================================== */
-    .table-responsive {
-      width: 100%;
-      overflow-x: auto;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-    }
-
-    .custom-table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 14px;
-    }
-
-    .custom-table th, .custom-table td {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border-color);
-      white-space: nowrap;
-      vertical-align: middle;
-    }
-
-    .custom-table th {
-      background-color: #f8f9fa;
-      font-weight: 600;
-      color: #495057;
-      text-transform: uppercase;
-      font-size: 12px;
-      letter-spacing: 0.5px;
-    }
-
-    .custom-table tbody tr:hover {
-      background-color: #f1f5f9;
-    }
-
-    .action-btns {
-      display: flex;
-      gap: 8px;
-    }
-
-    .icon-btn {
-      background: none;
-      border: none;
-      font-size: 15px;
-      cursor: pointer;
-      padding: 5px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-
-    .icon-btn.edit { color: #0d6efd; }
-    .icon-btn.delete { color: var(--color-inactive); }
-    .icon-btn:hover { background: #e2e8f0; }
-
-    /* ==========================================
-       6. MODAL (PENCERE) STİLLERİ
-       ========================================== */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.3s ease, visibility 0.3s ease;
-    }
-
-    .modal-overlay.active {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .modal-content {
-      background: #ffffff;
-      width: 100%;
-      max-width: 550px;
-      border-radius: 10px;
-      padding: 25px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-      transform: translateY(-20px);
-      transition: transform 0.3s ease;
-    }
-
-    .modal-overlay.active .modal-content {
-      transform: translateY(0);
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .modal-header h3 {
-      font-size: 18px;
-    }
-
-    .close-modal {
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      color: #6c757d;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    .form-group.full-width {
-      grid-column: span 2;
-    }
-
-    .form-group label {
-      font-size: 12px;
-      font-weight: 600;
-      color: #495057;
-    }
-
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      margin-top: 20px;
-      padding-top: 15px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    /* ==========================================
-       7. YETKİ KONTROLÜ VE TOAST BİLDİRİMİ
-       ========================================== */
-    .hide-licenses {
-      display: none !important;
-    }
-
-    .toast-container {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 9999;
-    }
-
-    .toast {
-      padding: 12px 20px;
-      background: #333;
-      color: #fff;
-      border-radius: 6px;
-      font-size: 14px;
-      margin-top: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      animation: slideIn 0.3s forwards;
-    }
-
-    .toast.success { background: var(--color-active); }
-    .toast.error { background: var(--color-inactive); }
-
-    @keyframes slideIn {
-      from { transform: translateX(100%); }
-      to { transform: translateX(0); }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Office 365 Management Portal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (Excel Engine) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* İstenen Tam Özel Renk Kodları ve Beyaz Yazı Stili */
+        .dept-pyp { background-color: #E8B409 !important; color: #ffffff !important; font-weight: 600; }
+        .dept-myp { background-color: #E0371D !important; color: #ffffff !important; font-weight: 600; }
+        .dept-dp  { background-color: #09BFE8 !important; color: #ffffff !important; font-weight: 600; }
+        .dept-teacher { background-color: #34C28F !important; color: #ffffff !important; font-weight: 600; }
+        .dept-staff { background-color: #7C09E8 !important; color: #ffffff !important; font-weight: 600; }
+    </style>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 md:p-8">
 
-  <div class="app-container">
-    
-    <!-- Üst Başlık -->
-    <div class="header-bar">
-      <h1>Kullanıcı Yönetim Paneli</h1>
-      <div class="role-switcher">
-        <label for="currentUserRoleSelect"><strong>Aktif Oturum Rolü:</strong></label>
-        <select id="currentUserRoleSelect" class="select-control" onchange="changeUserRole(this.value)">
-          <option value="admin">Admin / Staff</option>
-          <option value="teacher" selected>Teacher (Lisanslar Gizli)</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Filtre ve Aksiyon Barı -->
-    <div class="toolbar">
-      <div class="search-filter-group">
-        <input type="text" id="searchInput" class="input-control search-box" placeholder="İsim veya e-posta ile ara..." oninput="applyFilters()">
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-2xl shadow-md border border-slate-200">
+        <h2 class="text-2xl font-bold text-center text-slate-900 mb-2">School Portal Login</h2>
+        <p class="text-xs text-slate-500 text-center mb-6">Sign in with your Maarif credentials</p>
         
-        <select id="filterDepartment" class="select-control" onchange="applyFilters()">
-          <option value="">Tüm Departmanlar</option>
-          <option value="MYP">MYP</option>
-          <option value="PYP">PYP</option>
-          <option value="DP">DP</option>
-        </select>
+        <div id="loginError" class="hidden mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-lg border border-red-200"></div>
 
-        <select id="filterRole" class="select-control" onchange="applyFilters()">
-          <option value="">Tüm Roller</option>
-          <option value="staff">Staff</option>
-          <option value="teacher">Teacher</option>
-        </select>
-
-        <select id="filterStatus" class="select-control" onchange="applyFilters()">
-          <option value="">Tüm Durumlar</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-        </select>
-      </div>
-
-      <button class="btn btn-primary" onclick="openUserModal()"><i class="fa-solid fa-plus"></i> Yeni Kullanıcı</button>
-    </div>
-
-    <!-- Kullanıcı Tablosu -->
-    <div class="table-responsive">
-      <table class="custom-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Ad</th>
-            <th>Soyad</th>
-            <th>E-Posta</th>
-            <th>Rol</th>
-            <th>Departman</th>
-            <th class="col-licenses">Licenses</th>
-            <th>Status</th>
-            <th>Availability</th>
-            <th>İşlemler</th>
-          </tr>
-        </thead>
-        <tbody id="userTableBody">
-          <!-- Veriler Dinamik Olarak Yüklenecek -->
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-
-  <!-- KULLANICI EKLEME / DÜZENLEME MODALI -->
-  <div class="modal-overlay" id="userModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="modalTitle">Yeni Kullanıcı Ekle</h3>
-        <button class="close-modal" onclick="closeUserModal()">&times;</button>
-      </div>
-      <form id="userForm" onsubmit="handleFormSubmit(event)">
-        <input type="hidden" id="userId">
-        
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="firstName">Ad</label>
-            <input type="text" id="firstName" class="input-control" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="lastName">Soyad</label>
-            <input type="text" id="lastName" class="input-control" required>
-          </div>
-
-          <div class="form-group full-width">
-            <label for="email">E-Posta</label>
-            <input type="email" id="email" class="input-control" required>
-          </div>
-
-          <div class="form-group">
-            <label for="role">Rol</label>
-            <select id="role" class="select-control" required>
-              <option value="teacher">Teacher</option>
-              <option value="staff">Staff</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="department">Departman</label>
-            <select id="department" class="select-control" required>
-              <option value="MYP">MYP</option>
-              <option value="PYP">PYP</option>
-              <option value="DP">DP</option>
-            </select>
-          </div>
-
-          <div class="form-group full-width form-licenses-group">
-            <label for="licenses">Licenses</label>
-            <input type="text" id="licenses" class="input-control" placeholder="Örn: Standard, Pro">
-          </div>
-
-          <div class="form-group">
-            <label for="status">Status</label>
-            <select id="status" class="select-control">
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="availability">Availability</label>
-            <select id="availability" class="select-control">
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeUserModal()">İptal</button>
-          <button type="submit" class="btn btn-primary">Kaydet</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- TOAST BİLDİRİM KONTEYNERİ -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <!-- ==========================================
-     JAVASCRIPT MANTIĞI VE SUPABASE ENTEGRASYONU
-     ========================================== -->
-  <script>
-    // 1. SUPABASE AYARLARI (Kendi bilgilerinizi giriniz)
-    const SUPABASE_URL = "https://gnotendqbgfmlscjnwpz.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdub3RlbmRxYmdmbWxzY2pud3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNDY0NDgsImV4cCI6MjEwMzkyMjQ0OH0.KskgJTM4_Gttl8C5sGFoqDHXbjyxOh5aD2vz34BrZ_s";
-    
-    let supabaseClient = null;
-    if (SUPABASE_URL !== "https://YOUR-PROJECT.supabase.co") {
-      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-
-    // Uygulama Durum Yönetimi (State)
-    let allUsers = [];
-    let filteredUsers = [];
-    let currentUserRole = "teacher"; // Varsayılan test rolü
-
-    // Örnek YEDEK Veriler (Supabase verisi yoksa sistemin çalışması için)
-    const fallbackUsers = [
-      { id: 1, first_name: "Ahmet", last_name: "Yılmaz", email: "ahmet@maarif.com", role: "teacher", department: "MYP", licenses: "Full License", status: "Active", availability: "Active" },
-      { id: 2, first_name: "Ayşe", last_name: "Kaya", email: "ayse@maarif.com", role: "staff", department: "PYP", licenses: "Basic License", status: "Inactive", availability: "Inactive" },
-      { id: 3, first_name: "Mehmet", last_name: "Demir", email: "mehmet@maarif.com", role: "teacher", department: "DP", licenses: "Standard License", status: "Active", availability: "Inactive" },
-      { id: 4, first_name: "Zeynep", last_name: "Çelik", email: "zeynep@maarif.com", role: "staff", department: "MYP", licenses: "Admin License", status: "Active", availability: "Active" }
-    ];
-
-    // Sayfa Yüklendiğinde
-    document.addEventListener("DOMContentLoaded", () => {
-      initApp();
-    });
-
-    async function initApp() {
-      applyRolePermissions();
-      await fetchUsers();
-    }
-
-    // Rol Yetkilerini Uygulama (Teacher ise Licenses Gizle)
-    function applyRolePermissions() {
-      const licenseHeaders = document.querySelectorAll('.col-licenses');
-      const licenseFormGroups = document.querySelectorAll('.form-licenses-group');
-
-      if (currentUserRole === 'teacher') {
-        licenseHeaders.forEach(el => el.classList.add('hide-licenses'));
-        licenseFormGroups.forEach(el => el.classList.add('hide-licenses'));
-      } else {
-        licenseHeaders.forEach(el => el.classList.remove('hide-licenses'));
-        licenseFormGroups.forEach(el => el.classList.remove('hide-licenses'));
-      }
-    }
-
-    // Aktif Oturum Rolünü Değiştirme
-    function changeUserRole(newRole) {
-      currentUserRole = newRole;
-      applyRolePermissions();
-      renderTable();
-      showToast(`Oturum rolü "${newRole.toUpperCase()}" olarak değiştirildi.`, "info");
-    }
-
-    // Supabase'den Veri Çekme
-    async function fetchUsers() {
-      if (supabaseClient) {
-        try {
-          const { data, error } = await supabaseClient.from('users').select('*').order('id', { ascending: true });
-          if (error) throw error;
-          if (data && data.length > 0) {
-            allUsers = data;
-          } else {
-            allUsers = [...fallbackUsers];
-          }
-        } catch (err) {
-          console.warn("Supabase verileri çekilemedi, yedek veri kullanılıyor:", err.message);
-          allUsers = [...fallbackUsers];
-        }
-      } else {
-        allUsers = [...fallbackUsers];
-      }
-      
-      applyFilters();
-    }
-
-    // Filtreleme ve Arama
-    function applyFilters() {
-      const searchVal = document.getElementById('searchInput').value.toLowerCase();
-      const deptVal = document.getElementById('filterDepartment').value;
-      const roleVal = document.getElementById('filterRole').value;
-      const statusVal = document.getElementById('filterStatus').value;
-
-      filteredUsers = allUsers.filter(u => {
-        const fullName = `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase();
-        const matchesSearch = fullName.includes(searchVal) || (u.email && u.email.toLowerCase().includes(searchVal));
-        const matchesDept = !deptVal || u.department === deptVal;
-        const matchesRole = !roleVal || (u.role && u.role.toLowerCase() === roleVal.toLowerCase());
-        const matchesStatus = !statusVal || u.status === statusVal;
-
-        return matchesSearch && matchesDept && matchesRole && matchesStatus;
-      });
-
-      renderTable();
-    }
-
-    // Tabloyu Ekrana Basma
-    function renderTable() {
-      const tbody = document.getElementById('userTableBody');
-      tbody.innerHTML = '';
-
-      if (filteredUsers.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:20px; color:#999;">Kayıtlı kullanıcı bulunamadı.</td></tr>`;
-        return;
-      }
-
-      filteredUsers.forEach(user => {
-        const tr = document.createElement('tr');
-
-        // Rozet Sınıfları
-        const deptClass = getDepartmentBadgeClass(user.department);
-        const roleClass = getRoleBadgeClass(user.role);
-        
-        const isStatusActive = (user.status === 'Active' || user.status === true);
-        const statusClass = isStatusActive ? 'bg-active' : 'bg-inactive';
-        
-        const isAvailActive = (user.availability === 'Active' || user.availability === true);
-        const availClass = isAvailActive ? 'bg-active' : 'bg-inactive';
-
-        tr.innerHTML = `
-          <td>${user.id}</td>
-          <td>${user.first_name || '-'}</td>
-          <td>${user.last_name || '-'}</td>
-          <td>${user.email || '-'}</td>
-          <td><span class="badge-btn ${roleClass}">${user.role || '-'}</span></td>
-          <td><span class="badge-btn ${deptClass}">${user.department || '-'}</span></td>
-          <td class="col-licenses ${currentUserRole === 'teacher' ? 'hide-licenses' : ''}">${user.licenses || '-'}</td>
-          <td><button class="badge-btn ${statusClass}" onclick="toggleStatus(${user.id}, 'status')">${isStatusActive ? 'Active' : 'Inactive'}</button></td>
-          <td><button class="badge-btn ${availClass}" onclick="toggleStatus(${user.id}, 'availability')">${isAvailActive ? 'Active' : 'Inactive'}</button></td>
-          <td>
-            <div class="action-btns">
-              <button class="icon-btn edit" onclick="editUser(${user.id})" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
-              <button class="icon-btn delete" onclick="deleteUser(${user.id})" title="Sil"><i class="fa-solid fa-trash"></i></button>
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                <input type="email" id="loginEmail" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
-          </td>
-        `;
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+                <input type="password" id="loginPassword" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <button type="submit" class="w-full py-2.5 bg-slate-900 text-white font-medium text-sm rounded-lg hover:bg-slate-800 transition">
+                Sign In
+            </button>
+        </form>
+    </div>
 
-        tbody.appendChild(tr);
-      });
-    }
-
-    // Renk Yardımcı Fonksiyonları
-    function getDepartmentBadgeClass(dept) {
-      if (!dept) return '';
-      const d = dept.toUpperCase();
-      if (d === 'MYP') return 'bg-myp';
-      if (d === 'PYP') return 'bg-pyp';
-      if (d === 'DP') return 'bg-dp';
-      return '';
-    }
-
-    function getRoleBadgeClass(role) {
-      if (!role) return '';
-      const r = role.toLowerCase();
-      if (r === 'staff') return 'bg-staff';
-      if (r === 'teacher') return 'bg-teacher';
-      return '';
-    }
-
-    // Status ve Availability Hızlı Değiştirme
-    async function toggleStatus(id, field) {
-      const user = allUsers.find(u => u.id === id);
-      if (!user) return;
-
-      const currentVal = user[field];
-      const newVal = (currentVal === 'Active' || currentVal === true) ? 'Inactive' : 'Active';
-      user[field] = newVal;
-
-      if (supabaseClient) {
-        await supabaseClient.from('users').update({ [field]: newVal }).eq('id', id);
-      }
-
-      applyFilters();
-      showToast(`${field === 'status' ? 'Status' : 'Availability'} güncellendi.`, "success");
-    }
-
-    // Modal İşlemleri
-    function openUserModal() {
-      document.getElementById('userForm').reset();
-      document.getElementById('userId').value = '';
-      document.getElementById('modalTitle').innerText = 'Yeni Kullanıcı Ekle';
-      document.getElementById('userModal').classList.add('active');
-    }
-
-    function closeUserModal() {
-      document.getElementById('userModal').classList.remove('active');
-    }
-
-    function editUser(id) {
-      const user = allUsers.find(u => u.id === id);
-      if (!user) return;
-
-      document.getElementById('userId').value = user.id;
-      document.getElementById('firstName').value = user.first_name || '';
-      document.getElementById('lastName').value = user.last_name || '';
-      document.getElementById('email').value = user.email || '';
-      document.getElementById('role').value = user.role || 'teacher';
-      document.getElementById('department').value = user.department || 'MYP';
-      document.getElementById('licenses').value = user.licenses || '';
-      document.getElementById('status').value = user.status || 'Active';
-      document.getElementById('availability').value = user.availability || 'Active';
-
-      document.getElementById('modalTitle').innerText = 'Kullanıcıyı Düzenle';
-      document.getElementById('userModal').classList.add('active');
-    }
-
-    // Form Gönderme (Ekleme / Güncelleme)
-    async function handleFormSubmit(e) {
-      e.preventDefault();
-
-      const id = document.getElementById('userId').value;
-      const userData = {
-        first_name: document.getElementById('firstName').value,
-        last_name: document.getElementById('lastName').value,
-        email: document.getElementById('email').value,
-        role: document.getElementById('role').value,
-        department: document.getElementById('department').value,
-        licenses: document.getElementById('licenses').value,
-        status: document.getElementById('status').value,
-        availability: document.getElementById('availability').value
-      };
-
-      if (id) {
-        // Güncelleme
-        if (supabaseClient) {
-          await supabaseClient.from('users').update(userData).eq('id', id);
-        }
-        const index = allUsers.findIndex(u => u.id == id);
-        if (index !== -1) allUsers[index] = { id: Number(id), ...userData };
-        showToast("Kullanıcı başarıyla güncellendi.", "success");
-      } else {
-        // Yeni Ekleme
-        const newId = allUsers.length > 0 ? Math.max(...allUsers.map(u => u.id)) + 1 : 1;
-        const newRecord = { id: newId, ...userData };
-
-        if (supabaseClient) {
-          const { data } = await supabaseClient.from('users').insert([userData]).select();
-          if (data && data[0]) newRecord.id = data[0].id;
-        }
+    <!-- MAIN APP SCREEN -->
+    <div id="appScreen" class="hidden max-w-7xl mx-auto space-y-6">
         
-        allUsers.push(newRecord);
-        showToast("Yeni kullanıcı eklendi.", "success");
-      }
+        <!-- Header -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Office 365 Directory Portal</h1>
+                <p class="text-xs text-slate-500">Real-time Student & Staff Management System</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <span id="userRoleBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-slate-100 text-slate-800">Role</span>
+                    <p id="userEmailLabel" class="text-xs text-slate-500 mt-1"></p>
+                </div>
+                <button onclick="handleLogout()" class="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-xs font-medium rounded-lg text-slate-600">
+                    Sign Out
+                </button>
+            </div>
+        </div>
 
-      closeUserModal();
-      applyFilters();
-    }
+        <!-- Admin Controls: Upload Master Excel -->
+        <div id="adminControls" class="hidden bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-sm font-bold text-slate-800 mb-1">Master Directory Import (HQ Excel)</h2>
+            <p class="text-xs text-slate-500 mb-4">Upload the central Excel sheet to update users. Existing grades and departments will be preserved.</p>
+            <input type="file" id="excelFile" accept=".xlsx, .xls" class="hidden" onchange="importMasterExcel(event)">
+            <label for="excelFile" class="inline-flex items-center px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 cursor-pointer transition">
+                Import Central Excel File
+            </label>
+        </div>
 
-    // Kullanıcı Silme
-    async function deleteUser(id) {
-      if (!confirm("Bu kullanıcıyı silmek istediğinize emin misiniz?")) return;
+        <!-- Search & Export Toolbar -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
+            <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto flex-1">
+                <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Search across all fields..." 
+                       class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none w-full md:w-80">
+                
+                <select id="departmentFilter" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none">
+                    <option value="">All Departments</option>
+                    <option value="PYP Students">PYP Students</option>
+                    <option value="MYP Students">MYP Students</option>
+                    <option value="DP Students">DP Students</option>
+                    <option value="Teacher">Teacher</option>
+                    <option value="Staff">Staff</option>
+                </select>
 
-      if (supabaseClient) {
-        await supabaseClient.from('users').delete().eq('id', id);
-      }
+                <select id="gradeFilter" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white outline-none">
+                    <option value="">All Grades</option>
+                </select>
+            </div>
 
-      allUsers = allUsers.filter(u => u.id !== id);
-      applyFilters();
-      showToast("Kullanıcı silindi.", "error");
-    }
+            <button onclick="exportToExcel()" class="w-full md:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-2">
+                Export Filtered Results to Excel
+            </button>
+        </div>
 
-    // Toast Bildirim Gösterici
-    function showToast(message, type = "info") {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = `toast ${type}`;
-      toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${message}`;
+        <!-- Data Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                        <tr>
+                            <th class="p-3">Display Name</th>
+                            <th class="p-3">Email</th>
+                            <th class="p-3">Create Date</th>
+                            <th class="p-3">Account Type</th>
+                            <th class="p-3">Department</th>
+                            <th class="p-3">Grade</th>
+                            <th id="thLicenses" class="p-3 hidden">Licenses</th>
+                            <th class="p-3">Status</th>
+                            <th id="thAvailability" class="p-3 hidden">Availability</th>
+                            <th id="thActions" class="p-3 text-right hidden">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100">
+                        <tr><td colspan="10" class="p-8 text-center text-slate-400">Loading directory...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-      container.appendChild(toast);
+    </div>
 
-      setTimeout(() => {
-        toast.remove();
-      }, 3000);
-    }
-  </script>
+    <script>
+        // SUPABASE CREDENTIALS
+        const SUPABASE_URL = "https://gnotendqbgfmlscjnwpz.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdub3RlbmRxYmdmbWxzY2pud3B6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNDY0NDgsImV4cCI6MjEwMzkyMjQ0OH0.KskgJTM4_Gttl8C5sGFoqDHXbjyxOh5aD2vz34BrZ_s";
+
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let currentUser = null;
+        let userRole = null; // 'maarifadmin' or 'teacher'
+        let rawUsers = [];
+        let filteredUsers = [];
+
+        // Grade Options Generation
+        const gradesList = [];
+        for (let i = 1; i <= 5; i++) { gradesList.push(`PYP-${i}-A`, `PYP-${i}-B`); }
+        for (let i = 6; i <= 10; i++) { gradesList.push(`MYP-${i}-A`, `MYP-${i}-B`); }
+        for (let i = 11; i <= 12; i++) { gradesList.push(`DP-${i}-A`, `DP-${i}-B`); }
+
+        // Pre-rendered Grade and Department Options (Performance Cache)
+        const cachedGradeOptions = ['<option value="">N/A</option>']
+            .concat(gradesList.map(g => `<option value="${g}">${g}</option>`)).join('');
+
+        const cachedDeptOptions = ['PYP Students', 'MYP Students', 'DP Students', 'Teacher', 'Staff']
+            .map(d => `<option value="${d}">${d}</option>`).join('');
+
+        // Initialize Grade Filter Dropdown
+        const gradeFilterSelect = document.getElementById('gradeFilter');
+        gradesList.forEach(g => {
+            gradeFilterSelect.innerHTML += `<option value="${g}">${g}</option>`;
+        });
+
+        // 1. AUTHENTICATION HANDLERS
+        async function handleLogin(e) {
+            e.preventDefault();
+            document.getElementById('loginError').classList.add('hidden');
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const { data, error } = await db.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                showError(error.message);
+                return;
+            }
+
+            currentUser = data.user;
+            await fetchUserRole();
+            showApp();
+        }
+
+        async function fetchUserRole() {
+            const { data, error } = await db.from('user_roles').select('role').eq('user_id', currentUser.id).single();
+            userRole = (data && data.role) ? data.role : 'teacher';
+        }
+
+        async function handleLogout() {
+            await db.auth.signOut();
+            location.reload();
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('loginError');
+            el.innerText = msg;
+            el.classList.remove('hidden');
+        }
+
+        async function checkSession() {
+            const { data } = await db.auth.getSession();
+            if (data.session) {
+                currentUser = data.session.user;
+                await fetchUserRole();
+                showApp();
+            }
+        }
+
+        // 2. UI RENDER CONTROL
+        function showApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+
+            document.getElementById('userEmailLabel').innerText = currentUser.email;
+            const badge = document.getElementById('userRoleBadge');
+            badge.innerText = userRole;
+
+            if (userRole === 'maarifadmin') {
+                badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-purple-100 text-purple-800";
+                document.getElementById('adminControls').classList.remove('hidden');
+                document.getElementById('thLicenses').classList.remove('hidden');
+                document.getElementById('thAvailability').classList.remove('hidden');
+                document.getElementById('thActions').classList.remove('hidden');
+            } else {
+                badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-100 text-emerald-800";
+                document.getElementById('thLicenses').classList.add('hidden');
+                document.getElementById('thAvailability').classList.add('hidden');
+                document.getElementById('thActions').classList.add('hidden');
+            }
+
+            loadDirectory();
+        }
+
+        // 3. LOAD & FILTER DATA
+        async function loadDirectory() {
+            const { data, error } = await db.from('users').select('*').range(0, 2000).order('display_name');
+
+            if (error) {
+                alert("Error loading data: " + error.message);
+                return;
+            }
+
+            rawUsers = data || [];
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const dept = document.getElementById('departmentFilter').value;
+            const grade = document.getElementById('gradeFilter').value;
+
+            filteredUsers = rawUsers.filter(u => {
+                const matchesSearch = 
+                    (u.display_name || '').toLowerCase().includes(search) ||
+                    (u.email || '').toLowerCase().includes(search) ||
+                    (u.account_type || '').toLowerCase().includes(search) ||
+                    (u.licenses || '').toLowerCase().includes(search) ||
+                    (u.department || '').toLowerCase().includes(search) ||
+                    (u.grade || '').toLowerCase().includes(search);
+
+                const matchesDept = dept === '' || u.department === dept;
+                const matchesGrade = grade === '' || u.grade === grade;
+
+                return matchesSearch && matchesDept && matchesGrade;
+            });
+
+            renderTable();
+        }
+
+        function getDeptBadgeClass(dept) {
+            if (!dept) return 'dept-staff';
+            if (dept.includes('PYP')) return 'dept-pyp';
+            if (dept.includes('MYP')) return 'dept-myp';
+            if (dept.includes('DP')) return 'dept-dp';
+            if (dept.includes('Teacher')) return 'dept-teacher';
+            return 'dept-staff';
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-slate-400">No matching records found.</td></tr>';
+                return;
+            }
+
+            const isAdmin = userRole === 'maarifadmin';
+            const displayLimit = 100;
+            const usersToRender = filteredUsers.slice(0, displayLimit);
+
+            const rows = usersToRender.map(u => {
+                const deptClass = getDeptBadgeClass(u.department);
+                const isStudent = u.department && u.department.includes('Students');
+
+                const deptSelect = `<select onchange="updateUserField('${u.email}', 'department', this.value)" class="px-2 py-1 rounded text-xs font-bold ${deptClass} outline-none cursor-pointer">
+                    ${cachedDeptOptions.replace(`value="${u.department}"`, `value="${u.department}" selected`)}
+                </select>`;
+
+                const gradeSelect = `<select onchange="updateUserField('${u.email}', 'grade', this.value)" class="px-2 py-1 border rounded bg-white text-xs outline-none cursor-pointer ${!isStudent ? 'opacity-50' : ''}">
+                    ${cachedGradeOptions.replace(`value="${u.grade}"`, `value="${u.grade}" selected`)}
+                </select>`;
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-3 font-semibold text-slate-900">
+                            ${isAdmin ? `<input type="text" value="${u.display_name || ''}" onchange="updateUserField('${u.email}', 'display_name', this.value)" class="border-b bg-transparent outline-none w-full focus:border-blue-500">` : (u.display_name || '-')}
+                        </td>
+                        <td class="p-3 text-slate-600">${u.email}</td>
+                        <td class="p-3 text-slate-500">${u.created_date || '-'}</td>
+                        <td class="p-3 text-slate-500">${u.account_type || '-'}</td>
+                        <td class="p-3">${deptSelect}</td>
+                        <td class="p-3">${gradeSelect}</td>
+                        ${isAdmin ? `<td class="p-3 text-slate-500 max-w-xs truncate" title="${u.licenses || ''}">${u.licenses || '-'}</td>` : ''}
+                        <td class="p-3">
+                            ${isAdmin ? `
+                                <select onchange="updateUserField('${u.email}', 'status', this.value)" class="px-2 py-1 border rounded bg-white text-xs font-semibold ${u.status === 'Active' ? 'text-emerald-700' : 'text-red-600'}">
+                                    <option value="Active" ${u.status === 'Active' ? 'selected' : ''}>Active</option>
+                                    <option value="Inactive" ${u.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                                </select>
+                            ` : `<span class="${u.status === 'Active' ? 'text-emerald-600' : 'text-red-500'} font-semibold">${u.status || 'Active'}</span>`}
+                        </td>
+                        ${isAdmin ? `
+                            <td class="p-3">
+                                <select onchange="updateUserField('${u.email}', 'availability', this.value)" class="px-2 py-1 border rounded bg-white text-xs font-semibold ${u.availability === 'Available' ? 'text-blue-700' : 'text-slate-400'}">
+                                    <option value="Available" ${u.availability === 'Available' ? 'selected' : ''}>Available</option>
+                                    <option value="Deleted" ${u.availability === 'Deleted' ? 'selected' : ''}>Deleted</option>
+                                </select>
+                            </td>
+                            <td class="p-3 text-right">
+                                <button onclick="deleteUser('${u.email}')" class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded">
+                                    Delete
+                                </button>
+                            </td>
+                        ` : ''}
+                    </tr>
+                `;
+            }).join('');
+
+            let footerNote = '';
+            if (filteredUsers.length > displayLimit) {
+                footerNote = `<tr><td colspan="10" class="p-3 text-center text-xs text-slate-500 bg-slate-50 font-medium">Showing top 100 of ${filteredUsers.length} records. Use search or filters to narrow down results.</td></tr>`;
+            }
+
+            tbody.innerHTML = rows + footerNote;
+        }
+
+        // 4. UPDATE & DELETE OPERATIONS
+        async function updateUserField(email, field, value) {
+            const updatePayload = {};
+            updatePayload[field] = value;
+
+            const { error } = await db.from('users').update(updatePayload).eq('email', email);
+
+            if (error) {
+                alert("Update failed: " + error.message);
+                loadDirectory();
+            } else {
+                const user = rawUsers.find(u => u.email === email);
+                if (user) user[field] = value;
+                applyFilters();
+            }
+        }
+
+        async function deleteUser(email) {
+            if (!confirm(`Are you sure you want to permanently delete user: ${email}?`)) return;
+
+            const { error } = await db.from('users').delete().eq('email', email);
+
+            if (error) {
+                alert("Deletion failed: " + error.message);
+            } else {
+                rawUsers = rawUsers.filter(u => u.email !== email);
+                applyFilters();
+            }
+        }
+
+        // 5. IMPORT MASTER EXCEL (ADMIN ONLY)
+        async function importMasterExcel(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+
+                const records = json.map(row => {
+                    const email = (row['Email'] || '').trim().toLowerCase();
+                    const rawTitle = (row['Title'] || '').trim();
+                    
+                    let dept = 'Staff';
+                    if (/ogrenci|öğrenci/i.test(rawTitle)) dept = 'PYP Students';
+                    else if (/ogretmen|öğretmen/i.test(rawTitle)) dept = 'Teacher';
+
+                    const existing = rawUsers.find(u => u.email === email);
+
+                    return {
+                        email: email,
+                        display_name: row['Display name'] || `${row['First name'] || ''} ${row['Last name'] || ''}`.trim(),
+                        created_date: row['When created'] || '',
+                        account_type: rawTitle || 'N/A',
+                        licenses: row['Licenses'] || '',
+                        department: existing ? existing.department : dept,
+                        grade: existing ? existing.grade : '',
+                        status: 'Active',
+                        availability: 'Available'
+                    };
+                });
+
+                const { error } = await db.from('users').upsert(records, { onConflict: 'email' });
+
+                if (error) {
+                    alert("Import failed: " + error.message);
+                } else {
+                    alert(`Successfully imported ${records.length} records!`);
+                    loadDirectory();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 6. DYNAMIC EXCEL EXPORT
+        function exportToExcel() {
+            if (filteredUsers.length === 0) {
+                alert("No filtered data available to export.");
+                return;
+            }
+
+            const isAdmin = userRole === 'maarifadmin';
+
+            const exportData = filteredUsers.map(u => {
+                const row = {
+                    'Display Name': u.display_name,
+                    'Email': u.email,
+                    'Create Date': u.created_date,
+                    'Account Type': u.account_type,
+                    'Department': u.department,
+                    'Grade': u.grade || 'N/A',
+                    'Status': u.status
+                };
+                if (isAdmin) {
+                    row['Licenses'] = u.licenses;
+                    row['Availability'] = u.availability;
+                }
+                return row;
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered_Directory");
+
+            const activeDept = document.getElementById('departmentFilter').value;
+            const activeGrade = document.getElementById('gradeFilter').value;
+            let fileName = "Directory_Export";
+            if (activeGrade) fileName += `_${activeGrade}`;
+            else if (activeDept) fileName += `_${activeDept.replace(/\s+/g, '_')}`;
+
+            XLSX.writeFile(workbook, `${fileName}.xlsx`);
+        }
+
+        // Initialize Application Session
+        checkSession();
+    </script>
 </body>
 </html>
